@@ -1,12 +1,15 @@
 # MCP Read-Only Grafana Server
 
+[![Tests](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml/badge.svg)](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml)
+
 A secure MCP (Model Context Protocol) server that provides **read-only** access to Grafana instances using session authentication.
 
 ## Features
 
 - **Read-only access** - All operations are read-only, no modifications possible
 - **Session-based authentication** - Uses Grafana session cookies for secure access
-- **Dynamic token reloading** - Session tokens are reloaded from `.env` on every request (no restart needed when tokens expire!)
+- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `.env`
+- **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
 - **Multiple instances** - Support for multiple Grafana connections
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
 - **Security focused** - Timeouts, SSL verification, and secure token storage
@@ -57,18 +60,29 @@ GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
 4. Find the cookie named `grafana_session` or `grafana_sess`
 5. Copy the value and paste it in the `.env` file
 
-### 4. Test the Server
+### 4. Validate and Test Connections
+
+```bash
+# Validate configuration file
+just validate
+
+# Test Grafana connectivity
+just test-connection              # Test all connections
+just test-connection production_grafana  # Test specific connection
+```
+
+### 5. Run the Server
 
 Run the server manually to test:
 
 ```bash
-uv run python -m src.server
+just run
 
 # Or with a custom config file
-uv run python -m src.server /path/to/connections.yaml
+just run /path/to/connections.yaml
 ```
 
-### 5. Configure with Claude Desktop
+### 6. Configure with Claude Desktop
 
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -84,7 +98,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-### 6. Configure with VS Code Extensions (Cline/Continue)
+### 7. Configure with VS Code Extensions (Cline/Continue)
 
 Add to your MCP server configuration:
 
@@ -123,23 +137,33 @@ Search for dashboards by name or tag.
 
 **Returns:** List of matching dashboards with UIDs, titles, and tags
 
+### `get_dashboard_info`
+Get lightweight dashboard metadata and panel list (without full panel definitions). **Recommended first step for exploring dashboards, especially large ones.**
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `dashboard_uid` (required): UID of the dashboard
+
+**Returns:** Dashboard metadata, variables, and list of all panels with basic info
+
+### `get_dashboard_panel`
+Get full configuration for a single panel from a dashboard. **Use this after `get_dashboard_info()` to explore specific panels in detail.**
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `dashboard_uid` (required): UID of the dashboard
+- `panel_id` (required): Panel ID to retrieve
+
+**Returns:** Full panel JSON including queries, transformations, and field config
+
 ### `get_dashboard`
-Get complete dashboard definition.
+Get complete dashboard definition. **Use with caution for large dashboards - may exceed token limits. Prefer `get_dashboard_info()` + `get_dashboard_panel()` for large dashboards.**
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `dashboard_uid` (required): UID of the dashboard
 
 **Returns:** Full dashboard JSON including panels, variables, and settings
-
-### `get_dashboard_panels`
-Get simplified panel information from a dashboard.
-
-**Parameters:**
-- `connection_name` (required): Name of the Grafana connection
-- `dashboard_uid` (required): UID of the dashboard
-
-**Returns:** List of panels with basic properties
 
 ### `list_folders`
 List all folders in Grafana.
@@ -195,18 +219,23 @@ Each connection in `connections.yaml` supports:
 
 ### Session Token Management
 
-**Important**: Session tokens are automatically reloaded from `.env` before every API request. This means:
-- You can update expired tokens in `.env` without restarting the server
-- Simply update the `GRAFANA_SESSION_*` value in `.env` and the next request will use it
-- No need to restart the MCP server or Claude Desktop
+**Automatic Token Refresh**: Grafana rotates session tokens every 10 minutes. The server automatically:
+- Captures refreshed tokens from Grafana API response headers
+- Updates tokens in memory immediately
+- Persists new tokens back to `.env` file
+- **No manual token updates needed** - the server keeps itself authenticated!
+
+If you manually need to update a token:
+1. Update the `GRAFANA_SESSION_*` value in `.env`
+2. The new token will be picked up on the next request automatically
+3. No need to restart the MCP server or Claude Desktop
 
 ### Authentication Failed
 
-If you get authentication errors:
-1. Check that your session token is current (they expire)
-2. Update the token in `.env` - it will be picked up on the next request automatically
-3. Verify the token is correctly set in `.env`
-4. Ensure the environment variable name matches the connection name
+If you get authentication errors despite automatic refresh:
+1. Verify the initial token is valid in `.env`
+2. Check that the `.env` file is writable (needed for automatic token persistence)
+3. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
 
 ### Connection Timeout
 
@@ -226,15 +255,39 @@ For self-signed certificates (not recommended for production):
 
 ## Development
 
+### Available Commands
+
+See all available commands:
+```bash
+just
+```
+
+Common commands:
+```bash
+just install          # Install dependencies
+just validate         # Validate configuration
+just test-connection  # Test Grafana connections
+just run              # Run the server
+just lint             # Run linter
+just lint-fix         # Auto-fix linting issues
+just format           # Format code
+just test             # Run tests
+```
+
 ### Running Tests
 
 ```bash
+just test
+# or
 uv run pytest
 ```
 
 ### Code Formatting
 
 ```bash
+just format
+just lint
+# or
 uv run black src/
 uv run ruff check src/
 ```

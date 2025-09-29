@@ -13,6 +13,10 @@ install:
 run config="connections.yaml":
     uv run -- python -m src.server {{config}}
 
+# Validate configuration file
+validate config="connections.yaml":
+    uv run -- python -m src.tools.validate_config {{config}}
+
 # Test Grafana connection(s)
 test-connection connection="":
     #!/usr/bin/env bash
