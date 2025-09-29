@@ -1,0 +1,35 @@
+# MCP Read-Only Grafana Server - Connection Configuration Sample
+# Copy this file to connections.yaml and customize for your Grafana instances
+
+# Basic Grafana connection
+- connection_name: production_grafana
+  url: https://grafana.example.com
+  description: Production Grafana instance
+  # Optional: override default timeout (30 seconds)
+  # timeout: 60
+
+# Another Grafana instance
+- connection_name: staging_grafana
+  url: https://staging-grafana.example.com
+  description: Staging environment Grafana
+  # Optional settings:
+  # timeout: 30
+  # verify_ssl: true  # Set to false for self-signed certificates (not recommended)
+
+# Grafana Cloud instance
+- connection_name: grafana_cloud
+  url: https://myorg.grafana.net
+  description: Grafana Cloud instance
+
+# Local development Grafana
+- connection_name: local_grafana
+  url: http://localhost:3000
+  description: Local development Grafana
+  # For local instances, you might want to disable SSL verification
+  verify_ssl: false
+
+# Notes:
+# - Session tokens are read from environment variables: GRAFANA_SESSION_<CONNECTION_NAME>
+# - Connection names should use only letters, numbers, and underscores
+# - URLs should not include trailing slashes
+# - All connections are read-only - only GET requests are allowed

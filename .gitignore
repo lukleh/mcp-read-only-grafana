@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Connection configuration (contains sensitive server info)
+connections.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+
+# Claude Code
+.claude/
+
+# System
+.DS_Store

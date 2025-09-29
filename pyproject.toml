@@ -1,0 +1,45 @@
+[project]
+name = "mcp-read-only-grafana"
+version = "0.1.0"
+description = "MCP server for read-only access to Grafana instances"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Lukas Lehner", email = "lehner.lukas@gmail.com"}
+]
+license = {text = "MIT"}
+dependencies = [
+    "mcp>=1.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+mcp-read-only-grafana = "src.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
