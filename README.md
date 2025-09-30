@@ -207,13 +207,34 @@ Each connection in `connections.yaml` supports:
 - `GRAFANA_SESSION_<CONNECTION_NAME>`: Session token (required)
 - `GRAFANA_TIMEOUT_<CONNECTION_NAME>`: Override timeout for specific connection
 
-## Security Considerations
+## Security
+
+The server implements a **read-only security model**:
+
+1. **HTTP method restriction** - Only GET requests are performed, no write operations possible
+2. **Timeout protection** - Configurable request timeouts (default: 30s)
+3. **SSL verification** - Enabled by default for all connections
+4. **Session token security** - Tokens stored only in environment variables, never in code
+
+### How Read-Only Is Enforced
+
+**Grafana API** - The connector exclusively uses HTTP GET requests. All API methods are implemented through a single `_get()` function that only calls `httpx.AsyncClient.get()`. No write operations (POST, PUT, DELETE, PATCH) are implemented in the codebase.
+
+Grafana's REST API follows standard conventions:
+- **GET** - Read operations only (dashboards, datasources, alerts, users, teams, etc.)
+- **POST** - Create operations (not implemented)
+- **PUT** - Update operations (not implemented)
+- **DELETE** - Delete operations (not implemented)
+- **PATCH** - Partial update operations (not implemented)
+
+Since the connector only implements GET requests, it is **impossible to modify, create, or delete any Grafana resources** through this MCP server.
+
+### Additional Security Considerations
 
 1. **Session tokens are sensitive** - Never commit `.env` or `connections.yaml` to version control
-2. **Read-only access** - The server only performs GET requests
-3. **SSL verification** - Enabled by default for all connections
-4. **Timeout protection** - All requests have configurable timeouts
-5. **No credential storage** - Tokens are only stored in environment variables
+2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them
+3. **Permission scope** - The server inherits the read permissions of the session token's user account
+4. **No credential storage** - Tokens are only stored in environment variables and `.env` file
 
 ## Troubleshooting
 
