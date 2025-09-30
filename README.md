@@ -165,6 +165,15 @@ Get complete dashboard definition. **Use with caution for large dashboards - may
 
 **Returns:** Full dashboard JSON including panels, variables, and settings
 
+### `get_dashboard_panels`
+Get simplified panel information from a dashboard. Returns basic panel metadata without full configuration.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `dashboard_uid` (required): UID of the dashboard
+
+**Returns:** List of panels with IDs, titles, types, and descriptions
+
 ### `list_folders`
 List all folders in Grafana.
 
@@ -173,13 +182,48 @@ List all folders in Grafana.
 
 **Returns:** Folder hierarchy with IDs and titles
 
+### `list_folder_dashboards`
+List all dashboards within a specific folder.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `folder_uid` (required): UID of the folder
+
+**Returns:** List of dashboards in the folder with UIDs, titles, and URLs
+
 ### `list_datasources`
 List configured data sources.
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 
-**Returns:** Data source names, types, and configuration
+**Returns:** Data source names, types, UIDs, and configuration
+
+### `query_prometheus`
+Execute a PromQL query against a Prometheus datasource.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `datasource_uid` (required): UID of the Prometheus datasource
+- `query` (required): PromQL query string
+- `time_from` (optional): Start time (RFC3339 or relative like "now-1h")
+- `time_to` (optional): End time (RFC3339 or "now")
+- `step` (optional): Query resolution step (e.g., "15s", "1m")
+
+**Returns:** Query results with timestamps and values
+
+### `query_loki`
+Execute a LogQL query against a Loki datasource.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `datasource_uid` (required): UID of the Loki datasource
+- `query` (required): LogQL query string
+- `time_from` (optional): Start time (RFC3339 or relative like "now-1h")
+- `time_to` (optional): End time (RFC3339 or "now")
+- `limit` (optional): Maximum number of log lines (default: 100)
+
+**Returns:** Log query results with timestamps and log lines
 
 ### `list_alerts`
 List alert rules.
@@ -189,6 +233,60 @@ List alert rules.
 - `folder_uid` (optional): Filter alerts by folder
 
 **Returns:** Alert rules with status and conditions
+
+### `get_alert_rule_by_uid`
+Get a specific alert rule by its UID.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `alert_uid` (required): UID of the alert rule
+
+**Returns:** Alert rule details including conditions, labels, and annotations
+
+### `list_annotations`
+List annotations (events marked on dashboards).
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `time_from` (optional): Start time for annotation search
+- `time_to` (optional): End time for annotation search
+- `dashboard_id` (optional): Filter by dashboard ID
+- `tags` (optional): List of tags to filter by
+
+**Returns:** Annotations with timestamps, text, and tags
+
+### `get_dashboard_versions`
+Get version history for a dashboard.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `dashboard_uid` (required): UID of the dashboard
+
+**Returns:** List of dashboard versions with timestamps and change messages
+
+### `get_current_org`
+Get current organization information.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** Organization name and ID
+
+### `list_users`
+List all users in the organization.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** User list with IDs, names, emails, and roles
+
+### `list_teams`
+List all teams in the organization.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** Team list with IDs, names, and member counts
 
 ## Configuration Options
 
