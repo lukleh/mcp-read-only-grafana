@@ -20,7 +20,7 @@ def validate_config(config_path: str) -> bool:
             print("❌ No connections found in configuration")
             return False
 
-        print(f"✅ Configuration is valid")
+        print("✅ Configuration is valid")
         print(f"Found {len(connections)} connection(s):\n")
 
         for conn in connections:
