@@ -253,6 +253,25 @@ class ReadOnlyGrafanaServer:
             return json.dumps(datasources, indent=2)
 
         @self.mcp.tool()
+        async def get_datasource_health(connection_name: str, datasource_uid: str) -> str:
+            """
+            Run the health check for a specific datasource.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                datasource_uid: UID of the datasource to probe
+
+            Returns:
+                JSON string with health information reported by Grafana.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}")
+
+            connector = self.connectors[connection_name]
+            health = await connector.get_datasource_health(datasource_uid)
+            return json.dumps(health, indent=2)
+
+        @self.mcp.tool()
         async def query_prometheus(
             connection_name: str,
             datasource_uid: str,

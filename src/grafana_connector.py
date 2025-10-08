@@ -198,6 +198,10 @@ class GrafanaConnector:
 
         return formatted_sources
 
+    async def get_datasource_health(self, datasource_uid: str) -> Dict[str, Any]:
+        """Check the health of a specific datasource"""
+        return await self._get(f"/datasources/uid/{datasource_uid}/health")
+
     async def list_alerts(self, folder_uid: Optional[str] = None) -> List[Dict[str, Any]]:
         """List alert rules, optionally filtered by folder"""
         # Get alert rules from the new unified alerting API
