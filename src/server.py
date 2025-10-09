@@ -7,7 +7,7 @@ Provides secure read-only access to Grafana instances via MCP protocol.
 import logging
 import sys
 import json
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -329,6 +329,45 @@ class ReadOnlyGrafanaServer:
 
             connector = self.connectors[connection_name]
             result = await connector.query_loki(datasource_uid, query, time_from, time_to, limit)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def explore_query(
+            connection_name: str,
+            queries: List[Dict[str, Any]],
+            range_from: Optional[str] = None,
+            range_to: Optional[str] = None,
+            max_data_points: Optional[int] = None,
+            interval_ms: Optional[int] = None,
+            additional_options: Optional[Dict[str, Any]] = None,
+        ) -> str:
+            """
+            Execute a Grafana Explore query via the /api/ds/query endpoint.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                queries: List of Explore query definitions to execute
+                range_from: Optional relative or absolute start time (e.g., 'now-6h')
+                range_to: Optional end time (e.g., 'now')
+                max_data_points: Optional maximum number of datapoints to request
+                interval_ms: Optional query interval in milliseconds
+                additional_options: Extra fields to merge into the request body
+
+            Returns:
+                JSON string with the query response payload.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}")
+
+            connector = self.connectors[connection_name]
+            result = await connector.explore_query(
+                queries=queries,
+                range_from=range_from,
+                range_to=range_to,
+                max_data_points=max_data_points,
+                interval_ms=interval_ms,
+                additional_options=additional_options,
+            )
             return json.dumps(result, indent=2)
 
         @self.mcp.tool()

@@ -50,6 +50,33 @@ class GrafanaConnector:
         except Exception as e:
             raise Exception(f"Request failed: {str(e)}")
 
+    async def _post(self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execute a POST request to Grafana API"""
+        session_token = self.connection.reload_session_token()
+        self.client.cookies.set("grafana_session", session_token)
+
+        try:
+            response = await self.client.post(f"/api{endpoint}", json=json_payload)
+            response.raise_for_status()
+
+            # Check for refreshed session cookie in response headers
+            self._check_and_update_session_cookie(response)
+
+            if response.content:
+                return response.json()
+            return {}
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise Exception(f"Authentication failed for {self.connection.connection_name}. Session may have expired.")
+            elif e.response.status_code == 403:
+                raise Exception(f"Permission denied for {self.connection.connection_name}. User may lack read permissions.")
+            else:
+                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+        except httpx.TimeoutException:
+            raise Exception(f"Request timed out after {self.connection.timeout} seconds")
+        except Exception as e:
+            raise Exception(f"Request failed: {str(e)}")
+
     def _check_and_update_session_cookie(self, response: httpx.Response) -> None:
         """
         Check response headers for refreshed session cookie and update if found.
@@ -372,6 +399,41 @@ class GrafanaConnector:
 
         result = await self._get(endpoint, **params)
         return result
+
+    async def explore_query(
+        self,
+        queries: List[Dict[str, Any]],
+        range_from: Optional[str] = None,
+        range_to: Optional[str] = None,
+        max_data_points: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+        additional_options: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Execute a Grafana Explore query via /api/ds/query"""
+        if not queries:
+            raise ValueError("queries must contain at least one query definition")
+
+        payload: Dict[str, Any] = {
+            "queries": queries,
+        }
+
+        if range_from is not None:
+            payload["from"] = range_from
+        if range_to is not None:
+            payload["to"] = range_to
+        if max_data_points is not None:
+            payload["maxDataPoints"] = max_data_points
+        if interval_ms is not None:
+            payload["intervalMs"] = interval_ms
+
+        if additional_options:
+            # Avoid letting callers accidentally overwrite core keys
+            for key, value in additional_options.items():
+                if key in payload:
+                    raise ValueError(f"additional_options contains reserved key '{key}'")
+                payload[key] = value
+
+        return await self._post("/ds/query", json_payload=payload)
 
     async def get_current_org(self) -> Dict[str, Any]:
         """Get current organization information"""

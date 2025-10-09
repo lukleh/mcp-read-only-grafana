@@ -7,6 +7,7 @@ A secure MCP (Model Context Protocol) server that provides **read-only** access 
 ## Features
 
 - **Read-only access** - All operations are read-only, no modifications possible
+- **Minimal write surface** - All API calls use HTTP GET except the Explore `/api/ds/query` endpoint, which requires POST for read-only query execution
 - **Session-based authentication** - Uses Grafana session cookies for secure access
 - **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `.env`
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
@@ -224,6 +225,22 @@ Execute a LogQL query against a Loki datasource.
 - `limit` (optional): Maximum number of log lines (default: 100)
 
 **Returns:** Log query results with timestamps and log lines
+
+### `explore_query`
+Execute Grafana Explore queries via the `/api/ds/query` endpoint.
+
+> Note: This is the only tool that issues an HTTP POST (required by Grafana Explore). The call is still read-only and does not mutate Grafana state.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `queries` (required): List of Explore query definitions (including datasource, `refId`, etc.)
+- `range_from` (optional): Relative or absolute start time (e.g., `now-6h`)
+- `range_to` (optional): End time (e.g., `now`)
+- `max_data_points` (optional): Maximum number of datapoints to request
+- `interval_ms` (optional): Query interval in milliseconds
+- `additional_options` (optional): Extra request fields that must not overlap with reserved keys
+
+**Returns:** Raw Explore results as returned by Grafana
 
 ### `list_alerts`
 List alert rules.
