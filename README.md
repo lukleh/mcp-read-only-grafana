@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/lukleh-mcp-read-only-grafana-badge.png)](https://mseep.ai/app/lukleh-mcp-read-only-grafana)
+
 # MCP Read-Only Grafana Server
 
 [![Tests](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml/badge.svg)](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml)
