@@ -97,6 +97,14 @@ claude mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GR
 
 Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
 
+### 7. Add MCP to Codex
+
+```bash
+codex mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
+```
+
+Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
+
 ## Available MCP Tools
 
 ### `list_connections`
