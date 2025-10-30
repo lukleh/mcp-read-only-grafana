@@ -92,10 +92,10 @@ just run /path/to/connections.yaml
 ### 6. Add MCP to Claude Code
 
 ```bash
-claude mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_DIRECTORY}/mcp-read-only-grafana run -- python -m src.server
+claude mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
 ```
 
-Replace `{PATH_TO_DIRECTORY}` with the absolute path to where you cloned this repository.
+Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
 
 ## Available MCP Tools
 
