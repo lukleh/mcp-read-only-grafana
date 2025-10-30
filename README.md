@@ -15,6 +15,12 @@ A secure MCP (Model Context Protocol) server that provides **read-only** access 
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
 - **Security focused** - Timeouts, SSL verification, and secure token storage
 
+## Prerequisites
+
+This project requires:
+- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
+- [just](https://github.com/casey/just) - Command runner (optional, but recommended for development)
+
 ## Quick Start
 
 ### 1. Install Dependencies
@@ -83,35 +89,19 @@ just run
 just run /path/to/connections.yaml
 ```
 
-### 6. Configure with Claude Desktop
+### 6. Add MCP to Your AI Assistant
 
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
-```json
-{
-  "mcpServers": {
-    "grafana": {
-      "command": "uv",
-      "args": ["run", "--", "python", "-m", "src.server"],
-      "cwd": "/path/to/mcp-read-only-grafana"
-    }
-  }
-}
+For **Claude Code**:
+```bash
+claude mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
 ```
 
-### 7. Configure with VS Code Extensions (Cline/Continue)
-
-Add to your MCP server configuration:
-
-```json
-{
-  "mcp-read-only-grafana": {
-    "command": "uv",
-    "args": ["run", "--", "python", "-m", "src.server"],
-    "cwd": "/path/to/mcp-read-only-grafana"
-  }
-}
+For **Codex**:
+```bash
+codex mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
 ```
+
+Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
 
 ## Available MCP Tools
 
