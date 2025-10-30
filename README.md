@@ -62,7 +62,7 @@ GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
 #### How to Get Your Grafana Session Token:
 
 1. Login to your Grafana instance in a web browser
-2. Open Developer Tools (F12)
+2. Open Developer Tools
 3. Go to Application/Storage → Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
 5. Copy the value and paste it in the `.env` file
