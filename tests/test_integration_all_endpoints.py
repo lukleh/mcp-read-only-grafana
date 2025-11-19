@@ -117,6 +117,15 @@ class TestHealthAndBasicInfo:
         assert isinstance(result, dict), "Expected organization object"
         print(f"\n✓ Current org: {result.get('name', 'unknown')}")
 
+    @handle_errors_gracefully
+    async def test_get_current_user(self, grafana_connector):
+        """Test GET /api/user - Get current user profile."""
+        result = await grafana_connector.get_current_user()
+
+        assert isinstance(result, dict), "Expected user object"
+        assert "login" in result, "User payload should include login"
+        print(f"\n✓ Current user: {result.get('login')} ({result.get('role', 'unknown')})")
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio

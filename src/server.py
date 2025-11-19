@@ -453,6 +453,26 @@ class ReadOnlyGrafanaServer:
             return json.dumps(org, indent=2)
 
         @self.mcp.tool()
+        async def get_current_user(connection_name: str) -> str:
+            """
+            Get profile information for the authenticated Grafana user.
+
+            Args:
+                connection_name: Name of the Grafana connection
+
+            Returns:
+                JSON string describing the current user (id, login, email, role, etc.).
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            user = await connector.get_current_user()
+            return json.dumps(user, indent=2)
+
+        @self.mcp.tool()
         async def list_users(
             connection_name: str,
             page: Optional[int] = None,

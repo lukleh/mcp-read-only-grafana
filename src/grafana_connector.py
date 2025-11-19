@@ -526,6 +526,10 @@ class GrafanaConnector:
         """Get current organization information"""
         return await self._get("/org")
 
+    async def get_current_user(self) -> Dict[str, Any]:
+        """Get the currently authenticated user profile"""
+        return await self._get("/user")
+
     async def list_users(
         self,
         page: Optional[int] = None,

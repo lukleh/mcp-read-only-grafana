@@ -293,6 +293,14 @@ Get current organization information.
 
 **Returns:** Organization name and ID
 
+### `get_current_user`
+Return the profile for the currently authenticated Grafana user (name, login, email, role, theme, etc.).
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** User object as provided by `GET /api/user`
+
 ### `list_users`
 List all users in the organization.
 
