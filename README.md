@@ -125,6 +125,9 @@ Search for dashboards by name or tag.
 - `connection_name` (required): Name of the Grafana connection
 - `query` (optional): Search query for dashboard names
 - `tag` (optional): Tag to filter dashboards
+- `limit` (optional): Maximum results per page (Grafana default 1000, max 5000)
+- `page` (optional): Page number (1-indexed)
+- `fields` (optional): Subset of Grafana fields to return (e.g., `uid`, `title`, `url`, `type`, `tags`, `folderTitle`, `folderUid`)
 
 **Returns:** List of matching dashboards with UIDs, titles, and tags
 
@@ -179,6 +182,9 @@ List all dashboards within a specific folder.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `folder_uid` (required): UID of the folder
+- `limit` (optional): Maximum results per page
+- `page` (optional): Page number
+- `fields` (optional): Subset of Grafana fields (e.g., `uid`, `title`, `url`, `tags`, `folderUid`)
 
 **Returns:** List of dashboards in the folder with UIDs, titles, and URLs
 
@@ -250,6 +256,14 @@ Get a specific alert rule by its UID.
 
 **Returns:** Alert rule details including conditions, labels, and annotations
 
+### `list_provisioned_alert_rules`
+Fetch all alert rules through Grafana's provisioning API (`GET /api/v1/provisioning/alert-rules`) to audit provisioned definitions exactly as stored on the server.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** Provisioned alert rule payload grouped by folder/namespace and alert rule metadata
+
 ### `list_annotations`
 List annotations (events marked on dashboards).
 
@@ -284,6 +298,9 @@ List all users in the organization.
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
+- `page` (optional): Page number
+- `per_page` (optional): Page size
+- `fields` (optional): Subset of Grafana fields (`userId`, `email`, `name`, `login`, `role`, `lastSeenAt`, `lastSeenAtAge`)
 
 **Returns:** User list with IDs, names, emails, and roles
 
@@ -292,6 +309,9 @@ List all teams in the organization.
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
+- `page` (optional): Page number
+- `per_page` (optional): Page size
+- `fields` (optional): Subset of Grafana fields (`id`, `uid`, `name`, `email`, `memberCount`)
 
 **Returns:** Team list with IDs, names, and member counts
 

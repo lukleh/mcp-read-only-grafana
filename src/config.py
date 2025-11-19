@@ -8,25 +8,30 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 class GrafanaConnection(BaseModel):
     """Configuration for a single Grafana connection"""
-    connection_name: str = Field(..., description="Unique identifier for this connection")
+
+    connection_name: str = Field(
+        ..., description="Unique identifier for this connection"
+    )
     url: HttpUrl = Field(..., description="Grafana instance URL")
     description: str = Field("", description="Description of this Grafana instance")
     timeout: int = Field(30, description="Request timeout in seconds")
     verify_ssl: bool = Field(True, description="Verify SSL certificates")
     session_token: Optional[str] = Field(None, description="Grafana session token")
 
-    @field_validator('connection_name')
+    @field_validator("connection_name")
     def validate_connection_name(cls, v):
         """Ensure connection name is valid for environment variable naming"""
-        if not v.replace('_', '').replace('-', '').isalnum():
-            raise ValueError("Connection name must contain only letters, numbers, underscores, and hyphens")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(
+                "Connection name must contain only letters, numbers, underscores, and hyphens"
+            )
         return v
 
-    @field_validator('url')
+    @field_validator("url")
     def remove_trailing_slash(cls, v):
         """Remove trailing slash from URL if present"""
         url_str = str(v)
-        return url_str.rstrip('/')
+        return url_str.rstrip("/")
 
     def get_env_var_name(self) -> str:
         """Get the environment variable name for this connection's session token"""
@@ -126,7 +131,9 @@ class ConfigParser:
         connection.session_token = session_token
 
         # Load optional timeout override from environment
-        timeout_env_var = f"GRAFANA_TIMEOUT_{connection.connection_name.upper().replace('-', '_')}"
+        timeout_env_var = (
+            f"GRAFANA_TIMEOUT_{connection.connection_name.upper().replace('-', '_')}"
+        )
         timeout_override = os.getenv(timeout_env_var)
         if timeout_override:
             try:

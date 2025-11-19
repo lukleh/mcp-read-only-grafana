@@ -10,7 +10,7 @@ def test_parse_set_cookie_header():
     conn = GrafanaConnection(
         connection_name="test",
         url="https://grafana.example.com",
-        session_token="old_token_123"
+        session_token="old_token_123",
     )
     connector = GrafanaConnector(conn)
 
@@ -20,7 +20,7 @@ def test_parse_set_cookie_header():
         headers={
             "set-cookie": "grafana_session=new_token_456; Path=/; HttpOnly; SameSite=Lax"
         },
-        content=b'{"status": "ok"}'
+        content=b'{"status": "ok"}',
     )
 
     # Call the method
@@ -35,17 +35,15 @@ def test_parse_url_encoded_cookie():
     conn = GrafanaConnection(
         connection_name="test",
         url="https://grafana.example.com",
-        session_token="old_token"
+        session_token="old_token",
     )
     connector = GrafanaConnector(conn)
 
     # URL-encoded cookie value
     mock_response = httpx.Response(
         status_code=200,
-        headers={
-            "set-cookie": "grafana_session=abc%2B123%3Dtest; Path=/"
-        },
-        content=b'{"status": "ok"}'
+        headers={"set-cookie": "grafana_session=abc%2B123%3Dtest; Path=/"},
+        content=b'{"status": "ok"}',
     )
 
     connector._check_and_update_session_cookie(mock_response)
@@ -59,14 +57,12 @@ def test_no_set_cookie_header():
     conn = GrafanaConnection(
         connection_name="test",
         url="https://grafana.example.com",
-        session_token="original_token"
+        session_token="original_token",
     )
     connector = GrafanaConnector(conn)
 
     mock_response = httpx.Response(
-        status_code=200,
-        headers={},
-        content=b'{"status": "ok"}'
+        status_code=200, headers={}, content=b'{"status": "ok"}'
     )
 
     connector._check_and_update_session_cookie(mock_response)
@@ -80,16 +76,14 @@ def test_same_token_not_updated():
     conn = GrafanaConnection(
         connection_name="test",
         url="https://grafana.example.com",
-        session_token="same_token_123"
+        session_token="same_token_123",
     )
     connector = GrafanaConnector(conn)
 
     mock_response = httpx.Response(
         status_code=200,
-        headers={
-            "set-cookie": "grafana_session=same_token_123; Path=/"
-        },
-        content=b'{"status": "ok"}'
+        headers={"set-cookie": "grafana_session=same_token_123; Path=/"},
+        content=b'{"status": "ok"}',
     )
 
     connector._check_and_update_session_cookie(mock_response)
@@ -103,19 +97,21 @@ def test_multiple_set_cookie_headers():
     conn = GrafanaConnection(
         connection_name="test",
         url="https://grafana.example.com",
-        session_token="old_token"
+        session_token="old_token",
     )
     connector = GrafanaConnector(conn)
 
     # Multiple cookies in response
     mock_response = httpx.Response(
         status_code=200,
-        headers=httpx.Headers([
-            ("set-cookie", "other_cookie=value1; Path=/"),
-            ("set-cookie", "grafana_session=new_token_789; Path=/"),
-            ("set-cookie", "grafana_session_expiry=1234567890; Path=/")
-        ]),
-        content=b'{"status": "ok"}'
+        headers=httpx.Headers(
+            [
+                ("set-cookie", "other_cookie=value1; Path=/"),
+                ("set-cookie", "grafana_session=new_token_789; Path=/"),
+                ("set-cookie", "grafana_session_expiry=1234567890; Path=/"),
+            ]
+        ),
+        content=b'{"status": "ok"}',
     )
 
     connector._check_and_update_session_cookie(mock_response)

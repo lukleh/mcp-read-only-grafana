@@ -62,14 +62,15 @@ def test_config_parser_valid_yaml():
   timeout: 60
   verify_ssl: false
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(yaml_content)
         config_path = f.name
 
     try:
         # Set environment variable for the test
         import os
-        os.environ['GRAFANA_SESSION_TEST_GRAFANA'] = 'test_token_123'
+
+        os.environ["GRAFANA_SESSION_TEST_GRAFANA"] = "test_token_123"
 
         parser = ConfigParser(config_path)
         connections = parser.load_config()
@@ -84,7 +85,7 @@ def test_config_parser_valid_yaml():
         assert conn.session_token == "test_token_123"
 
         # Cleanup
-        del os.environ['GRAFANA_SESSION_TEST_GRAFANA']
+        del os.environ["GRAFANA_SESSION_TEST_GRAFANA"]
     finally:
         Path(config_path).unlink()
 
@@ -95,14 +96,15 @@ def test_config_parser_missing_env_var():
 - connection_name: test_grafana
   url: https://grafana.example.com
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(yaml_content)
         config_path = f.name
 
     try:
         import os
+
         # Make sure env var doesn't exist
-        os.environ.pop('GRAFANA_SESSION_TEST_GRAFANA', None)
+        os.environ.pop("GRAFANA_SESSION_TEST_GRAFANA", None)
 
         parser = ConfigParser(config_path)
         with pytest.raises(ValueError, match="Missing session token"):

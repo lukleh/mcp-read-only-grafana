@@ -18,13 +18,52 @@ uv run python -m src.server
 # Run with custom config file
 uv run python -m src.server /path/to/connections.yaml
 
+# Run with admin endpoints enabled (requires Grafana admin permissions)
+uv run python -m src.server --allow-admin
+
+# Run with both custom config and admin endpoints
+uv run python -m src.server /path/to/connections.yaml --allow-admin
+
 # Code formatting
 uv run black src/
 uv run ruff check src/
 
 # Run tests
 uv run pytest
+
+# Run ALL integration tests (requires Grafana credentials)
+uv run pytest tests/test_integration_all_endpoints.py -v -m integration
+
+# Run integration tests INCLUDING admin-only endpoints (requires admin credentials)
+RUN_ADMIN_TESTS=1 uv run pytest tests/test_integration_all_endpoints.py -v -m integration
+
+# Run specific test category (e.g., only alerting tests)
+uv run pytest tests/test_integration_all_endpoints.py::TestAlertingProvisioningAPI -v
+
+# Run only unit tests (no credentials needed)
+uv run pytest -v -m "not integration"
 ```
+
+### Test Configuration
+
+**Admin Test Control:**
+Integration tests for admin-only endpoints (Provisioning API, user/team management) are skipped by default. To run them:
+
+```bash
+# Enable admin tests via environment variable
+export RUN_ADMIN_TESTS=1
+uv run pytest tests/test_integration_all_endpoints.py -v
+
+# Or inline for a single run
+RUN_ADMIN_TESTS=1 uv run pytest tests/test_integration_all_endpoints.py -v
+```
+
+**Admin-only test coverage:**
+- `test_list_users` - Requires org admin permissions
+- `test_list_teams` - Requires org admin permissions
+- `TestAlertingProvisioningAPI` - All 16 provisioning API endpoints (requires Grafana admin)
+
+Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 
 ## Architecture
 
@@ -77,3 +116,12 @@ Session-based authentication using Grafana session cookies:
 3. **No credential storage**: Tokens only in environment variables, never in config files
 4. **Multiple instance support**: Each connection has its own connector with independent configuration
 5. **MCP error handling**: Let exceptions propagate; framework handles them properly
+6. **Admin endpoint protection**: Provisioning API endpoints (16 total) are only registered when `--allow-admin` flag is provided
+   - These endpoints require Grafana admin permissions
+   - Marked with `[ADMIN]` prefix in their docstrings
+   - Includes: alert rules, contact points, notification policies, templates, mute timings
+7. **Dual alerting APIs**:
+   - **Ruler API** (non-admin): Available by default, allows regular users to view/manage their own alerts
+     - `get_ruler_rules()`, `get_ruler_namespace_rules()`, `get_ruler_group()`
+   - **Provisioning API** (admin-only): Requires `--allow-admin`, used for infrastructure-as-code workflows
+     - `list_provisioned_alert_rules()`, `get_provisioned_alert_rule()`, etc.
