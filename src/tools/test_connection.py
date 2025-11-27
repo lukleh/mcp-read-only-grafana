@@ -13,7 +13,9 @@ from src.config import ConfigParser
 from src.grafana_connector import GrafanaConnector
 
 
-async def test_connection(config_path: str, connection_name: Optional[str] = None) -> bool:
+async def test_connection(
+    config_path: str, connection_name: Optional[str] = None
+) -> bool:
     """Test Grafana connection(s)"""
 
     try:
@@ -26,7 +28,9 @@ async def test_connection(config_path: str, connection_name: Optional[str] = Non
 
         # Filter to specific connection if requested
         if connection_name:
-            connections = [c for c in connections if c.connection_name == connection_name]
+            connections = [
+                c for c in connections if c.connection_name == connection_name
+            ]
             if not connections:
                 print(f"❌ Connection not found: {connection_name}")
                 print("Available connections:")
@@ -56,17 +60,20 @@ async def test_connection(config_path: str, connection_name: Optional[str] = Non
                 print("  ✅ Connected successfully")
 
                 # Show version if available
-                if 'version' in health:
+                if "version" in health:
                     print(f"  Grafana version: {health['version']}")
 
                 # Show database status if available
-                if 'database' in health:
+                if "database" in health:
                     print(f"  Database: {health['database']}")
 
             except Exception as e:
                 error_msg = str(e)
                 # Clean up error messages
-                if "authentication failed" in error_msg.lower() or "session may have expired" in error_msg.lower():
+                if (
+                    "authentication failed" in error_msg.lower()
+                    or "session may have expired" in error_msg.lower()
+                ):
                     print("  ❌ Authentication failed - check session token in .env")
                     env_var = connection.get_env_var_name()
                     print(f"     Environment variable: {env_var}")
@@ -74,7 +81,9 @@ async def test_connection(config_path: str, connection_name: Optional[str] = Non
                     print("  ❌ Permission denied - user may lack read permissions")
                 elif "timed out" in error_msg.lower():
                     print("  ❌ Connection timeout - check network or timeout settings")
-                elif "connection" in error_msg.lower() or "connect" in error_msg.lower():
+                elif (
+                    "connection" in error_msg.lower() or "connect" in error_msg.lower()
+                ):
                     print("  ❌ Cannot connect to server - check URL")
                 else:
                     print(f"  ❌ Connection failed: {error_msg[:200]}")
@@ -102,12 +111,12 @@ def main():
     parser.add_argument(
         "connection",
         nargs="?",
-        help="Specific connection name to test (tests all if not specified)"
+        help="Specific connection name to test (tests all if not specified)",
     )
     parser.add_argument(
         "--config",
         default="connections.yaml",
-        help="Path to configuration file (default: connections.yaml)"
+        help="Path to configuration file (default: connections.yaml)",
     )
 
     args = parser.parse_args()

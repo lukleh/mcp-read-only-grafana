@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./connections.schema.json
 # MCP Read-Only Grafana Server - Connection Configuration Sample
 # Copy this file to connections.yaml and customize for your Grafana instances
 
@@ -29,7 +30,10 @@
   verify_ssl: false
 
 # Notes:
-# - Session tokens are read from environment variables: GRAFANA_SESSION_<CONNECTION_NAME>
-# - Connection names should use only letters, numbers, and underscores
+# - Credentials are read from environment variables:
+#     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME>
+#     - API key (Bearer): GRAFANA_API_KEY_<CONNECTION_NAME>
+#   If both are set, API key takes precedence.
+# - Connection names should use only letters, numbers, underscores, and hyphens
 # - URLs should not include trailing slashes
-# - All connections are read-only - only GET requests are allowed
+# - Credentials are reloaded from .env before each request to support token rotation

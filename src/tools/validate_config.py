@@ -50,12 +50,14 @@ def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Validate MCP Grafana Server configuration")
+    parser = argparse.ArgumentParser(
+        description="Validate MCP Grafana Server configuration"
+    )
     parser.add_argument(
         "config",
         nargs="?",
         default="connections.yaml",
-        help="Path to configuration file (default: connections.yaml)"
+        help="Path to configuration file (default: connections.yaml)",
     )
 
     args = parser.parse_args()

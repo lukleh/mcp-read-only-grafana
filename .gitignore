@@ -21,3 +21,5 @@ venv/
 
 # System
 .DS_Store
+
+scripts/

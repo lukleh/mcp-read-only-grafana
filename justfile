@@ -11,7 +11,7 @@ install:
 
 # Run the server
 run config="connections.yaml":
-    uv run -- python -m src.server {{config}}
+    @uv run -- python -m src.server {{config}}
 
 # Validate configuration file
 validate config="connections.yaml":
