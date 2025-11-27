@@ -1,6 +1,6 @@
 import httpx
 import logging
-from typing import List, Dict, Any, Optional, Iterable
+from typing import Any, Dict, Iterable, List, NoReturn, Optional
 from urllib.parse import unquote
 from .config import GrafanaConnection
 from .exceptions import (
@@ -106,8 +106,10 @@ class GrafanaConnector:
             return response.json()
         return {}
 
-    def _handle_http_error(self, e: httpx.HTTPStatusError, operation: str) -> None:
+    def _handle_http_error(self, e: httpx.HTTPStatusError, operation: str) -> NoReturn:
         """Convert HTTP errors to appropriate custom exceptions.
+
+        This method always raises an exception and never returns normally.
 
         Args:
             e: The httpx HTTPStatusError

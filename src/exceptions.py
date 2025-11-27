@@ -12,7 +12,7 @@ Exception Hierarchy:
     └── GrafanaTimeoutError - Request timeout
 """
 
-from typing import List
+from typing import List, Optional
 
 
 class GrafanaError(Exception):
@@ -83,7 +83,7 @@ class GrafanaAPIError(GrafanaError):
     """
 
     def __init__(
-        self, status_code: int, message: str, connection_name: str | None = None
+        self, status_code: int, message: str, connection_name: Optional[str] = None
     ):
         self.status_code = status_code
         self.message = message
@@ -100,7 +100,7 @@ class GrafanaTimeoutError(GrafanaError):
         connection_name: Optional connection name for context.
     """
 
-    def __init__(self, timeout_seconds: int, connection_name: str | None = None):
+    def __init__(self, timeout_seconds: int, connection_name: Optional[str] = None):
         self.timeout_seconds = timeout_seconds
         self.connection_name = connection_name
         prefix = f"[{connection_name}] " if connection_name else ""
