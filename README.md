@@ -91,9 +91,6 @@ just validate
 # Test Grafana connectivity
 just test-connection              # Test all connections
 just test-connection production_grafana  # Test specific connection
-
-# Quick smoke test for API-key or session auth (hits /api/health)
-uv run python scripts/smoke_api_key.py --connection production_grafana
 ```
 
 ### 5. Run the Server

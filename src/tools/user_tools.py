@@ -1,7 +1,7 @@
 """User, team, and annotation MCP tools.
 
 This module provides tools for:
-- Getting current user profile
+- Getting current user profile and permissions
 - Listing organization users and teams
 - Listing annotations
 """
@@ -44,6 +44,28 @@ def register_user_tools(
         connector = get_connector(connectors, connection_name)
         user = await connector.get_current_user()
         return json.dumps(user, indent=2)
+
+    @mcp.tool()
+    async def get_user_permissions(connection_name: str) -> str:
+        """
+        Get permissions granted to the authenticated user.
+
+        Lists the permissions granted to the signed-in user. Returns a map of
+        action names to their authorized scopes. Useful for checking what the
+        current API key or session can access.
+
+        Note: Requires Grafana 8.0+ with RBAC enabled. May return 404 on older
+        versions or instances without fine-grained access control.
+
+        Args:
+            connection_name: Name of the Grafana connection
+
+        Returns:
+            JSON string mapping action names to authorized scopes.
+        """
+        connector = get_connector(connectors, connection_name)
+        permissions = await connector.get_user_permissions()
+        return json.dumps(permissions, indent=2)
 
     @mcp.tool()
     async def list_users(

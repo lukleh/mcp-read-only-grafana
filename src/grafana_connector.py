@@ -631,10 +631,16 @@ class GrafanaConnector:
         """
         Get the current user's permissions.
 
-        Note: Availability depends on Grafana version and user role; some instances
-        may return 403 if the endpoint is restricted.
+        Lists the permissions granted to the signed-in user. Returns a map of
+        actions to their authorized scopes.
+
+        Note: Requires Grafana 8.0+ with RBAC enabled. May return 404 on older
+        versions or instances without fine-grained access control.
+
+        Returns:
+            Dict mapping action names to list of authorized scopes.
         """
-        return await self._get("/user/permissions")
+        return await self._get("/access-control/user/permissions")
 
     async def list_users(
         self,
