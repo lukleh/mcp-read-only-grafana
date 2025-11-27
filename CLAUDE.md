@@ -69,11 +69,10 @@ Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 
 ### Core Components
 
-**src/server.py** - MCP server implementation using FastMCP
-- `ReadOnlyGrafanaServer` class manages connections and defines MCP tools
-- All tool functions are decorated with `@self.mcp.tool()`
+**src/server.py** - MCP server entry point (~150 lines)
+- `ReadOnlyGrafanaServer` class manages connections and orchestrates tool registration
+- Calls domain-specific registration functions from `src/tools/`
 - Error handling: Let exceptions propagate naturally - the MCP framework handles them
-- Connection validation: Raise `ValueError` for invalid connection names with available options
 
 **src/config.py** - Configuration management
 - `GrafanaConnection` (Pydantic model): Validates connection settings
@@ -87,6 +86,31 @@ Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 - This allows updating session tokens in .env without restarting the server
 - All API methods return formatted dictionaries/lists, not raw responses
 
+**src/exceptions.py** - Custom exception hierarchy
+- `GrafanaError` (base), `ConnectionNotFoundError`, `AuthenticationError`
+- `PermissionDeniedError`, `GrafanaAPIError`, `GrafanaTimeoutError`
+
+**src/types.py** - TypedDict definitions for Grafana responses
+- `DashboardFull`, `PanelInfo`, `AlertRuleInfo`, `DatasourceInfo`, etc.
+
+**src/validation.py** - Validation utilities
+- `get_connector()`: Centralizes connection validation (replaces 55 repeated checks)
+
+### Tool Organization
+
+Tools are organized into domain-specific modules under `src/tools/`:
+
+| Module | Tools | Description |
+|--------|-------|-------------|
+| `core_tools.py` | `list_connections`, `get_health`, `get_current_org` | Connection management |
+| `dashboard_tools.py` | 8 tools | Dashboard CRUD and navigation |
+| `datasource_tools.py` | 5 tools | Prometheus, Loki queries |
+| `alert_tools.py` | 8 tools | Alert rules, state, history |
+| `user_tools.py` | 4 tools | Users, teams, annotations |
+| `admin_tools.py` | 27 tools | Admin-only (requires `--allow-admin`) |
+
+Each module exports a `register_*_tools(mcp, connectors)` function.
+
 ### Configuration Flow
 
 1. `ConfigParser.load_config()` reads `connections.yaml`
@@ -96,11 +120,15 @@ Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 
 ### Error Handling Pattern
 
-Following the mcp-read-only-sql pattern:
-- Tool functions raise exceptions (ValueError for connection not found)
-- Do NOT catch exceptions and return JSON error objects
-- The MCP framework automatically converts exceptions to proper error responses
-- This is cleaner and more consistent than manual error handling
+Custom exceptions in `src/exceptions.py` provide clear, typed errors:
+- `ConnectionNotFoundError`: Invalid connection name (shows available options)
+- `AuthenticationError`: HTTP 401, expired session
+- `PermissionDeniedError`: HTTP 403, insufficient permissions
+- `GrafanaAPIError`: Other HTTP errors with status code
+- `GrafanaTimeoutError`: Request timeout
+
+The MCP framework automatically converts exceptions to proper error responses.
+Tool functions use `get_connector()` for validation instead of manual checks.
 
 ### Authentication
 

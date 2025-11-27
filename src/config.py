@@ -138,7 +138,8 @@ class ConfigParser:
         # Create connection model
         connection = GrafanaConnection(**conn_data)
 
-        # Load credentials from environment (prefer API key if present)
+        # Load credentials from environment
+        # API key takes precedence over session token if both are set
         env_var_name = connection.get_env_var_name()
         session_token = os.getenv(env_var_name)
         api_key_env_var = connection.get_api_key_env_var_name()

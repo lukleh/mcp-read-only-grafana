@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Grafana Connections Configuration",
+  "description": "Configuration file for MCP Read-Only Grafana server connections",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["connection_name", "url"],
+    "additionalProperties": false,
+    "properties": {
+      "connection_name": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9_-]+$",
+        "description": "Unique identifier for this connection. Used in tool calls and environment variable names. Only alphanumeric characters, underscores, and hyphens allowed.",
+        "examples": ["production_grafana", "staging-grafana"]
+      },
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https?://",
+        "description": "Grafana instance URL (without trailing slash)",
+        "examples": ["https://grafana.example.com", "http://localhost:3000"]
+      },
+      "description": {
+        "type": "string",
+        "default": "",
+        "description": "Human-readable description of this connection",
+        "examples": ["Production Grafana instance", "Local development server"]
+      },
+      "timeout": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 300,
+        "default": 30,
+        "description": "Request timeout in seconds"
+      },
+      "verify_ssl": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to verify SSL certificates. Set to false only for development/testing with self-signed certs."
+      }
+    }
+  },
+  "minItems": 1,
+  "examples": [
+    [
+      {
+        "connection_name": "production_grafana",
+        "url": "https://grafana.example.com",
+        "description": "Production Grafana instance",
+        "timeout": 30,
+        "verify_ssl": true
+      }
+    ],
+    [
+      {
+        "connection_name": "local",
+        "url": "http://localhost:3000",
+        "description": "Local development",
+        "timeout": 10,
+        "verify_ssl": false
+      },
+      {
+        "connection_name": "staging",
+        "url": "https://staging-grafana.example.com",
+        "description": "Staging environment"
+      }
+    ]
+  ]
+}

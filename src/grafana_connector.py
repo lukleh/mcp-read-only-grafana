@@ -3,12 +3,29 @@ import logging
 from typing import List, Dict, Any, Optional, Iterable
 from urllib.parse import unquote
 from .config import GrafanaConnection
+from .exceptions import (
+    AuthenticationError,
+    GrafanaAPIError,
+    GrafanaTimeoutError,
+    PermissionDeniedError,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class GrafanaConnector:
-    """Connector for read-only Grafana API access"""
+    """Async client for Grafana API.
+
+    Authentication:
+        Supports two authentication methods:
+        - API key (Bearer token): Set GRAFANA_API_KEY_<CONNECTION_NAME>
+        - Session cookie: Set GRAFANA_SESSION_<CONNECTION_NAME>
+
+        If both are configured, API key takes precedence.
+
+    Credentials are reloaded from .env before each request to support
+    token rotation without server restart.
+    """
 
     def __init__(self, connection: GrafanaConnection):
         self.connection = connection
@@ -62,9 +79,12 @@ class GrafanaConnector:
 
         return {field: record[field] for field in requested_list if field in record}
 
-    async def _get(self, endpoint: str, **params) -> Dict[str, Any]:
-        """Execute a GET request to Grafana API"""
-        # Reload credentials from .env before each request
+    def _refresh_credentials(self) -> None:
+        """Refresh credentials from .env before making a request.
+
+        Reloads either API key or session token depending on which auth
+        method is configured. API key takes precedence if both are set.
+        """
         if self.connection.api_key:
             api_key = self.connection.reload_api_key()
             self.client.headers["Authorization"] = f"Bearer {api_key}"
@@ -72,146 +92,102 @@ class GrafanaConnector:
             session_token = self.connection.reload_session_token()
             self.client.cookies.set("grafana_session", session_token)
 
+    def _handle_response(self, response: httpx.Response) -> Dict[str, Any]:
+        """Process a successful response: check cookie refresh, parse JSON.
+
+        Args:
+            response: The httpx response object
+
+        Returns:
+            Parsed JSON response, or empty dict if no content
+        """
+        self._check_and_update_session_cookie(response)
+        if response.content:
+            return response.json()
+        return {}
+
+    def _handle_http_error(self, e: httpx.HTTPStatusError, operation: str) -> None:
+        """Convert HTTP errors to appropriate custom exceptions.
+
+        Args:
+            e: The httpx HTTPStatusError
+            operation: Description of the operation (e.g., "read", "write", "delete")
+
+        Raises:
+            AuthenticationError: For 401 responses
+            PermissionDeniedError: For 403 responses
+            GrafanaAPIError: For other HTTP errors
+        """
+        if e.response.status_code == 401:
+            raise AuthenticationError(self.connection.connection_name)
+        elif e.response.status_code == 403:
+            raise PermissionDeniedError(self.connection.connection_name, operation)
+        else:
+            raise GrafanaAPIError(
+                e.response.status_code,
+                e.response.text,
+                self.connection.connection_name,
+            )
+
+    async def _get(self, endpoint: str, **params) -> Dict[str, Any]:
+        """Execute a GET request to Grafana API."""
+        self._refresh_credentials()
         try:
             response = await self.client.get(f"/api{endpoint}", params=params)
             response.raise_for_status()
-
-            # Check for refreshed session cookie in response headers
-            self._check_and_update_session_cookie(response)
-
-            return response.json()
+            return self._handle_response(response)
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                raise Exception(
-                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
-                )
-            elif e.response.status_code == 403:
-                raise Exception(
-                    f"Permission denied for {self.connection.connection_name}. User may lack read permissions."
-                )
-            else:
-                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+            self._handle_http_error(e, "read")
         except httpx.TimeoutException:
-            raise Exception(
-                f"Request timed out after {self.connection.timeout} seconds"
+            raise GrafanaTimeoutError(
+                self.connection.timeout, self.connection.connection_name
             )
-        except Exception as e:
-            raise Exception(f"Request failed: {str(e)}")
 
     async def _post(
         self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Execute a POST request to Grafana API"""
-        if self.connection.api_key:
-            api_key = self.connection.reload_api_key()
-            self.client.headers["Authorization"] = f"Bearer {api_key}"
-        else:
-            session_token = self.connection.reload_session_token()
-            self.client.cookies.set("grafana_session", session_token)
-
+        """Execute a POST request to Grafana API."""
+        self._refresh_credentials()
         try:
             response = await self.client.post(f"/api{endpoint}", json=json_payload)
             response.raise_for_status()
-
-            # Check for refreshed session cookie in response headers
-            self._check_and_update_session_cookie(response)
-
-            if response.content:
-                return response.json()
-            return {}
+            return self._handle_response(response)
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                raise Exception(
-                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
-                )
-            elif e.response.status_code == 403:
-                raise Exception(
-                    f"Permission denied for {self.connection.connection_name}. User may lack read permissions."
-                )
-            else:
-                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+            self._handle_http_error(e, "write")
         except httpx.TimeoutException:
-            raise Exception(
-                f"Request timed out after {self.connection.timeout} seconds"
+            raise GrafanaTimeoutError(
+                self.connection.timeout, self.connection.connection_name
             )
-        except Exception as e:
-            raise Exception(f"Request failed: {str(e)}")
 
     async def _put(
         self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Execute a PUT request to Grafana API"""
-        if self.connection.api_key:
-            api_key = self.connection.reload_api_key()
-            self.client.headers["Authorization"] = f"Bearer {api_key}"
-        else:
-            session_token = self.connection.reload_session_token()
-            self.client.cookies.set("grafana_session", session_token)
-
+        """Execute a PUT request to Grafana API."""
+        self._refresh_credentials()
         try:
             response = await self.client.put(f"/api{endpoint}", json=json_payload)
             response.raise_for_status()
-
-            # Check for refreshed session cookie in response headers
-            self._check_and_update_session_cookie(response)
-
-            if response.content:
-                return response.json()
-            return {}
+            return self._handle_response(response)
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                raise Exception(
-                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
-                )
-            elif e.response.status_code == 403:
-                raise Exception(
-                    f"Permission denied for {self.connection.connection_name}. User may lack write permissions."
-                )
-            else:
-                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+            self._handle_http_error(e, "write")
         except httpx.TimeoutException:
-            raise Exception(
-                f"Request timed out after {self.connection.timeout} seconds"
+            raise GrafanaTimeoutError(
+                self.connection.timeout, self.connection.connection_name
             )
-        except Exception as e:
-            raise Exception(f"Request failed: {str(e)}")
 
     async def _delete(self, endpoint: str) -> Dict[str, Any]:
-        """Execute a DELETE request to Grafana API"""
-        if self.connection.api_key:
-            api_key = self.connection.reload_api_key()
-            self.client.headers["Authorization"] = f"Bearer {api_key}"
-        else:
-            session_token = self.connection.reload_session_token()
-            self.client.cookies.set("grafana_session", session_token)
-
+        """Execute a DELETE request to Grafana API."""
+        self._refresh_credentials()
         try:
             response = await self.client.delete(f"/api{endpoint}")
             response.raise_for_status()
-
-            # Check for refreshed session cookie in response headers
-            self._check_and_update_session_cookie(response)
-
-            if response.content:
-                return response.json()
-            return {}
+            return self._handle_response(response)
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                raise Exception(
-                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
-                )
-            elif e.response.status_code == 403:
-                raise Exception(
-                    f"Permission denied for {self.connection.connection_name}. User may lack write permissions."
-                )
-            else:
-                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+            self._handle_http_error(e, "delete")
         except httpx.TimeoutException:
-            raise Exception(
-                f"Request timed out after {self.connection.timeout} seconds"
+            raise GrafanaTimeoutError(
+                self.connection.timeout, self.connection.connection_name
             )
-        except Exception as e:
-            raise Exception(f"Request failed: {str(e)}")
 
     def _check_and_update_session_cookie(self, response: httpx.Response) -> None:
         """
