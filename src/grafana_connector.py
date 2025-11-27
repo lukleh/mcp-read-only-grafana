@@ -12,9 +12,18 @@ class GrafanaConnector:
 
     def __init__(self, connection: GrafanaConnection):
         self.connection = connection
+        headers = {}
+        cookies = None
+
+        if connection.api_key:
+            headers["Authorization"] = f"Bearer {connection.api_key}"
+        elif connection.session_token:
+            cookies = {"grafana_session": connection.session_token}
+
         self.client = httpx.AsyncClient(
             base_url=str(connection.url),
-            cookies={"grafana_session": connection.session_token},
+            headers=headers or None,
+            cookies=cookies,
             timeout=connection.timeout,
             verify=connection.verify_ssl,
             follow_redirects=True,
@@ -55,9 +64,13 @@ class GrafanaConnector:
 
     async def _get(self, endpoint: str, **params) -> Dict[str, Any]:
         """Execute a GET request to Grafana API"""
-        # Reload session token from .env before each request
-        session_token = self.connection.reload_session_token()
-        self.client.cookies.set("grafana_session", session_token)
+        # Reload credentials from .env before each request
+        if self.connection.api_key:
+            api_key = self.connection.reload_api_key()
+            self.client.headers["Authorization"] = f"Bearer {api_key}"
+        else:
+            session_token = self.connection.reload_session_token()
+            self.client.cookies.set("grafana_session", session_token)
 
         try:
             response = await self.client.get(f"/api{endpoint}", params=params)
@@ -89,8 +102,12 @@ class GrafanaConnector:
         self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Execute a POST request to Grafana API"""
-        session_token = self.connection.reload_session_token()
-        self.client.cookies.set("grafana_session", session_token)
+        if self.connection.api_key:
+            api_key = self.connection.reload_api_key()
+            self.client.headers["Authorization"] = f"Bearer {api_key}"
+        else:
+            session_token = self.connection.reload_session_token()
+            self.client.cookies.set("grafana_session", session_token)
 
         try:
             response = await self.client.post(f"/api{endpoint}", json=json_payload)
@@ -120,11 +137,91 @@ class GrafanaConnector:
         except Exception as e:
             raise Exception(f"Request failed: {str(e)}")
 
+    async def _put(
+        self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Execute a PUT request to Grafana API"""
+        if self.connection.api_key:
+            api_key = self.connection.reload_api_key()
+            self.client.headers["Authorization"] = f"Bearer {api_key}"
+        else:
+            session_token = self.connection.reload_session_token()
+            self.client.cookies.set("grafana_session", session_token)
+
+        try:
+            response = await self.client.put(f"/api{endpoint}", json=json_payload)
+            response.raise_for_status()
+
+            # Check for refreshed session cookie in response headers
+            self._check_and_update_session_cookie(response)
+
+            if response.content:
+                return response.json()
+            return {}
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise Exception(
+                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
+                )
+            elif e.response.status_code == 403:
+                raise Exception(
+                    f"Permission denied for {self.connection.connection_name}. User may lack write permissions."
+                )
+            else:
+                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+        except httpx.TimeoutException:
+            raise Exception(
+                f"Request timed out after {self.connection.timeout} seconds"
+            )
+        except Exception as e:
+            raise Exception(f"Request failed: {str(e)}")
+
+    async def _delete(self, endpoint: str) -> Dict[str, Any]:
+        """Execute a DELETE request to Grafana API"""
+        if self.connection.api_key:
+            api_key = self.connection.reload_api_key()
+            self.client.headers["Authorization"] = f"Bearer {api_key}"
+        else:
+            session_token = self.connection.reload_session_token()
+            self.client.cookies.set("grafana_session", session_token)
+
+        try:
+            response = await self.client.delete(f"/api{endpoint}")
+            response.raise_for_status()
+
+            # Check for refreshed session cookie in response headers
+            self._check_and_update_session_cookie(response)
+
+            if response.content:
+                return response.json()
+            return {}
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise Exception(
+                    f"Authentication failed for {self.connection.connection_name}. Session may have expired."
+                )
+            elif e.response.status_code == 403:
+                raise Exception(
+                    f"Permission denied for {self.connection.connection_name}. User may lack write permissions."
+                )
+            else:
+                raise Exception(f"HTTP {e.response.status_code}: {e.response.text}")
+        except httpx.TimeoutException:
+            raise Exception(
+                f"Request timed out after {self.connection.timeout} seconds"
+            )
+        except Exception as e:
+            raise Exception(f"Request failed: {str(e)}")
+
     def _check_and_update_session_cookie(self, response: httpx.Response) -> None:
         """
         Check response headers for refreshed session cookie and update if found.
         Grafana rotates session tokens every 10 minutes via Set-Cookie headers.
         """
+        # Skip if using API key authentication
+        if not self.connection.session_token:
+            return
+
         # Look for Set-Cookie headers
         set_cookie_headers = response.headers.get_list("set-cookie")
 
@@ -253,6 +350,28 @@ class GrafanaConnector:
             formatted_folders.append(formatted)
 
         return formatted_folders
+
+    async def create_folder(
+        self, title: str, uid: Optional[str] = None, parent_uid: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a new folder in Grafana.
+
+        Args:
+            title: The title of the folder
+            uid: Optional unique identifier for the folder
+            parent_uid: Optional parent folder UID (requires nested folders feature)
+
+        Returns:
+            Dict with created folder details (uid, title, url, etc.)
+        """
+        payload: Dict[str, Any] = {"title": title}
+        if uid:
+            payload["uid"] = uid
+        if parent_uid:
+            payload["parentUid"] = parent_uid
+
+        return await self._post("/folders", json_payload=payload)
 
     async def list_datasources(self) -> List[Dict[str, Any]]:
         """List all configured data sources"""
@@ -530,6 +649,15 @@ class GrafanaConnector:
         """Get the currently authenticated user profile"""
         return await self._get("/user")
 
+    async def get_user_permissions(self) -> Dict[str, Any]:
+        """
+        Get the current user's permissions.
+
+        Note: Availability depends on Grafana version and user role; some instances
+        may return 403 if the endpoint is restricted.
+        """
+        return await self._get("/user/permissions")
+
     async def list_users(
         self,
         page: Optional[int] = None,
@@ -622,6 +750,109 @@ class GrafanaConnector:
         """
         return await self._get(f"/ruler/grafana/api/v1/rules/{namespace}/{group_name}")
 
+    # Prometheus-compatible alerting endpoints (for alert state visibility)
+    async def get_prometheus_rules(
+        self,
+        state: Optional[str] = None,
+        rule_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get all alert rules with their current evaluation state.
+
+        This endpoint returns rules organized by namespace with their current state
+        (Normal, Pending, Alerting, NoData, Error). It's the same endpoint used by
+        Grafana's Alert List panel.
+
+        Args:
+            state: Optional filter by state (e.g., "firing", "pending", "inactive")
+            rule_name: Optional filter by rule name (partial match)
+
+        Returns:
+            Dict with 'status' and 'data' containing groups organized by namespace,
+            each rule including its current state, health, and evaluation info.
+        """
+        params: Dict[str, Any] = {}
+        if state:
+            params["state"] = state
+        if rule_name:
+            params["rule_name"] = rule_name
+
+        return await self._get("/prometheus/grafana/api/v1/rules", **params)
+
+    async def get_alertmanager_alerts(
+        self,
+        filter_labels: Optional[List[str]] = None,
+        silenced: Optional[bool] = None,
+        inhibited: Optional[bool] = None,
+        active: Optional[bool] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get currently firing alert instances from Alertmanager.
+
+        Returns alerts that have transitioned from Pending to Firing state.
+        These are the actual alert instances with their labels and annotations.
+
+        Args:
+            filter_labels: Optional label matchers (e.g., ["alertname=HighCPU", "severity=critical"])
+            silenced: Include silenced alerts (default: true)
+            inhibited: Include inhibited alerts (default: true)
+            active: Include active alerts (default: true)
+
+        Returns:
+            List of firing alert instances with labels, annotations, startsAt, etc.
+        """
+        params: Dict[str, Any] = {}
+        if filter_labels:
+            params["filter"] = filter_labels
+        if silenced is not None:
+            params["silenced"] = str(silenced).lower()
+        if inhibited is not None:
+            params["inhibited"] = str(inhibited).lower()
+        if active is not None:
+            params["active"] = str(active).lower()
+
+        return await self._get("/alertmanager/grafana/api/v2/alerts", **params)
+
+    async def get_alert_state_history(
+        self,
+        rule_uid: Optional[str] = None,
+        labels: Optional[Dict[str, str]] = None,
+        from_time: Optional[str] = None,
+        to_time: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get alert state transition history.
+
+        Returns the history of state changes for alert rules, including
+        transitions between Normal, Pending, Alerting, NoData, and Error states.
+
+        Args:
+            rule_uid: Optional filter by specific rule UID
+            labels: Optional label matchers to filter history
+            from_time: Start time (ISO 8601 or relative like "now-1h")
+            to_time: End time (ISO 8601 or relative like "now")
+            limit: Maximum number of history entries to return
+
+        Returns:
+            Dict containing state history entries with timestamps and state transitions.
+        """
+        params: Dict[str, Any] = {}
+        if rule_uid:
+            params["ruleUID"] = rule_uid
+        if labels:
+            # Convert labels dict to query format
+            for key, value in labels.items():
+                params[f"labels[{key}]"] = value
+        if from_time:
+            params["from"] = from_time
+        if to_time:
+            params["to"] = to_time
+        if limit is not None:
+            params["limit"] = limit
+
+        return await self._get("/v1/rules/history", **params)
+
     async def list_provisioned_alert_rules(self) -> List[Dict[str, Any]]:
         """
         Fetch all alert rules from the provisioning API.
@@ -694,6 +925,68 @@ class GrafanaConnector:
             f"/v1/provisioning/folder/{folder_uid}/rule-groups/{group}/export"
         )
 
+    # Alert Rule Write Operations
+    async def create_alert_rule(self, rule: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new alert rule.
+
+        Args:
+            rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
+                  condition, data, noDataState, execErrState)
+
+        Returns:
+            Created alert rule with UID
+        """
+        return await self._post("/v1/provisioning/alert-rules", json_payload=rule)
+
+    async def update_alert_rule(
+        self, alert_uid: str, rule: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update an existing alert rule.
+
+        Args:
+            alert_uid: UID of the alert rule to update
+            rule: Updated alert rule configuration
+
+        Returns:
+            Updated alert rule
+        """
+        return await self._put(
+            f"/v1/provisioning/alert-rules/{alert_uid}", json_payload=rule
+        )
+
+    async def delete_alert_rule(self, alert_uid: str) -> Dict[str, Any]:
+        """
+        Delete an alert rule.
+
+        Args:
+            alert_uid: UID of the alert rule to delete
+
+        Returns:
+            Empty dict on success
+        """
+        return await self._delete(f"/v1/provisioning/alert-rules/{alert_uid}")
+
+    async def update_rule_group_interval(
+        self, folder_uid: str, group: str, config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update a rule group's configuration (interval, rules).
+
+        Args:
+            folder_uid: UID of the folder
+            group: Name of the rule group
+            config: Rule group configuration (folderUid, interval, rules, title)
+
+        Returns:
+            Updated rule group
+        """
+        return await self._put(
+            f"/v1/provisioning/folder/{folder_uid}/rule-groups/{group}",
+            json_payload=config,
+        )
+
     # Contact Points
     async def list_contact_points(self) -> List[Dict[str, Any]]:
         """
@@ -704,14 +997,51 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/contact-points")
 
-    async def export_contact_points(self) -> Dict[str, Any]:
+    # Contact Point Write Operations
+    async def create_contact_point(
+        self, contact_point: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Export all contact points in provisioning format.
+        Create a new contact point.
+
+        Args:
+            contact_point: Contact point configuration (requires: name, type, settings)
 
         Returns:
-            Contact points in provisioning YAML format
+            Created contact point with UID
         """
-        return await self._get("/v1/provisioning/contact-points/export")
+        return await self._post(
+            "/v1/provisioning/contact-points", json_payload=contact_point
+        )
+
+    async def update_contact_point(
+        self, uid: str, contact_point: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update an existing contact point.
+
+        Args:
+            uid: UID of the contact point to update
+            contact_point: Updated contact point configuration
+
+        Returns:
+            Updated contact point
+        """
+        return await self._put(
+            f"/v1/provisioning/contact-points/{uid}", json_payload=contact_point
+        )
+
+    async def delete_contact_point(self, uid: str) -> Dict[str, Any]:
+        """
+        Delete a contact point.
+
+        Args:
+            uid: UID of the contact point to delete
+
+        Returns:
+            Empty dict on success
+        """
+        return await self._delete(f"/v1/provisioning/contact-points/{uid}")
 
     # Notification Policies
     async def get_notification_policies(self) -> Dict[str, Any]:
@@ -723,14 +1053,29 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/policies")
 
-    async def export_notification_policies(self) -> Dict[str, Any]:
+    # Notification Policy Write Operations
+    async def set_notification_policies(
+        self, policies: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Export notification policies in provisioning format.
+        Set the notification policy tree.
+
+        Args:
+            policies: Notification policy tree configuration (Route object)
 
         Returns:
-            Notification policies in provisioning YAML format
+            Updated notification policies
         """
-        return await self._get("/v1/provisioning/policies/export")
+        return await self._put("/v1/provisioning/policies", json_payload=policies)
+
+    async def delete_notification_policies(self) -> Dict[str, Any]:
+        """
+        Clear the notification policy tree (reset to defaults).
+
+        Returns:
+            Empty dict on success
+        """
+        return await self._delete("/v1/provisioning/policies")
 
     # Notification Templates
     async def list_notification_templates(self) -> List[Dict[str, Any]]:
@@ -754,6 +1099,36 @@ class GrafanaConnector:
         """
         return await self._get(f"/v1/provisioning/templates/{name}")
 
+    # Notification Template Write Operations
+    async def set_notification_template(
+        self, name: str, template: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Create or update a notification template.
+
+        Args:
+            name: Name of the template
+            template: Template configuration (requires: template field with content)
+
+        Returns:
+            Created/updated template
+        """
+        return await self._put(
+            f"/v1/provisioning/templates/{name}", json_payload=template
+        )
+
+    async def delete_notification_template(self, name: str) -> Dict[str, Any]:
+        """
+        Delete a notification template.
+
+        Args:
+            name: Name of the template to delete
+
+        Returns:
+            Empty dict on success
+        """
+        return await self._delete(f"/v1/provisioning/templates/{name}")
+
     # Mute Timings
     async def list_mute_timings(self) -> List[Dict[str, Any]]:
         """
@@ -776,26 +1151,47 @@ class GrafanaConnector:
         """
         return await self._get(f"/v1/provisioning/mute-timings/{name}")
 
-    async def export_all_mute_timings(self) -> Dict[str, Any]:
+    # Mute Timing Write Operations
+    async def create_mute_timing(self, mute_timing: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Export all mute timings in provisioning format.
-
-        Returns:
-            All mute timings in provisioning YAML format
-        """
-        return await self._get("/v1/provisioning/mute-timings/export")
-
-    async def export_mute_timing(self, name: str) -> Dict[str, Any]:
-        """
-        Export a specific mute timing in provisioning format.
+        Create a new mute timing.
 
         Args:
-            name: Name of the mute timing
+            mute_timing: Mute timing configuration (requires: name, time_intervals)
 
         Returns:
-            Mute timing in provisioning YAML format
+            Created mute timing
         """
-        return await self._get(f"/v1/provisioning/mute-timings/{name}/export")
+        return await self._post("/v1/provisioning/mute-timings", json_payload=mute_timing)
+
+    async def update_mute_timing(
+        self, name: str, mute_timing: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update an existing mute timing.
+
+        Args:
+            name: Name of the mute timing to update
+            mute_timing: Updated mute timing configuration
+
+        Returns:
+            Updated mute timing
+        """
+        return await self._put(
+            f"/v1/provisioning/mute-timings/{name}", json_payload=mute_timing
+        )
+
+    async def delete_mute_timing(self, name: str) -> Dict[str, Any]:
+        """
+        Delete a mute timing.
+
+        Args:
+            name: Name of the mute timing to delete
+
+        Returns:
+            Empty dict on success
+        """
+        return await self._delete(f"/v1/provisioning/mute-timings/{name}")
 
     async def list_folder_dashboards(
         self,

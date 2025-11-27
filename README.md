@@ -2,14 +2,16 @@
 
 [![Tests](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml/badge.svg)](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml)
 
-A secure MCP (Model Context Protocol) server that provides **read-only** access to Grafana instances using session authentication.
+A secure MCP (Model Context Protocol) server that provides access to Grafana instances using session authentication or API keys.
+
+**Compatibility:** Targeted and tested against Grafana 9.5.x. Newer versions (e.g., 10.x) should work for read-only endpoints but may expose extra fields not covered here.
 
 ## Features
 
-- **Read-only access** - All operations are read-only, no modifications possible
-- **Minimal write surface** - All API calls use HTTP GET except the Explore `/api/ds/query` endpoint, which requires POST for read-only query execution
-- **Session-based authentication** - Uses Grafana session cookies for secure access
-- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `.env`
+- **Read-only by default** - All operations are read-only unless `--allow-admin` is enabled
+- **Optional admin mode** - Enable write operations (create/update/delete alerts) with `--allow-admin` flag
+- **Session-based authentication** - Uses Grafana session cookies for secure access (default) and also supports Grafana API keys
+- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `.env` (session-cookie mode only)
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
 - **Multiple instances** - Support for multiple Grafana connections
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
@@ -53,11 +55,18 @@ Create a `.env` file from the sample:
 cp .env.sample .env
 ```
 
-Add your Grafana session tokens to `.env`:
+You can authenticate **either** with a session cookie (auto-rotated) **or** with a Grafana API key (Bearer token):
 
-```bash
-GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
-```
+- Session cookie (default, supports automatic rotation & persistence):
+  ```bash
+  GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
+  ```
+- API key (no rotation; useful for service accounts or Grafana Cloud tokens):
+  ```bash
+  GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
+  ```
+
+If both are set, the server will prefer the API key.
 
 #### How to Get Your Grafana Session Token:
 
@@ -66,6 +75,12 @@ GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
 3. Go to Application/Storage → Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
 5. Copy the value and paste it in the `.env` file
+
+#### How to Get a Grafana API Key:
+
+1. In Grafana, go to **Administration → Service Accounts** (or **Configuration → API Keys** on older versions)
+2. Create a key with the minimum required read permissions
+3. Copy the generated token (starts with `glsa_` or similar) and paste it into `.env` as shown above
 
 ### 4. Validate and Test Connections
 
@@ -76,6 +91,9 @@ just validate
 # Test Grafana connectivity
 just test-connection              # Test all connections
 just test-connection production_grafana  # Test specific connection
+
+# Quick smoke test for API-key or session auth (hits /api/health)
+uv run python scripts/smoke_api_key.py --connection production_grafana
 ```
 
 ### 5. Run the Server
@@ -87,6 +105,9 @@ just run
 
 # Or with a custom config file
 just run /path/to/connections.yaml
+
+# Enable admin mode for write operations (alert management)
+just run --allow-admin
 ```
 
 ### 6. Add MCP to Your AI Assistant
@@ -256,6 +277,41 @@ Get a specific alert rule by its UID.
 
 **Returns:** Alert rule details including conditions, labels, and annotations
 
+### `get_alert_rules_with_state`
+Get all alert rules with their current evaluation state. This is the same endpoint used by Grafana's Alert List panel - useful for checking if an alert is working after creation.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `state` (optional): Filter by state (e.g., "firing", "pending", "inactive")
+- `rule_name` (optional): Filter by rule name (partial match)
+
+**Returns:** Rules organized by namespace with current state (Normal, Pending, Alerting, NoData, Error), health status, and evaluation info
+
+### `get_firing_alerts`
+Get currently firing alert instances from Alertmanager. Returns alerts that have transitioned from Pending to Firing state.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `filter_labels` (optional): Label matchers (e.g., `["alertname=HighCPU", "severity=critical"]`)
+- `silenced` (optional): Include silenced alerts (default: true)
+- `inhibited` (optional): Include inhibited alerts (default: true)
+- `active` (optional): Include active alerts (default: true)
+
+**Returns:** List of firing alert instances with labels, annotations, startsAt, and other metadata
+
+### `get_alert_state_history`
+Get alert state transition history. Useful for debugging alert behavior and understanding evaluation patterns.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `rule_uid` (optional): Filter by specific rule UID
+- `labels` (optional): Label matchers to filter history
+- `from_time` (optional): Start time (ISO 8601 or relative like "now-1h")
+- `to_time` (optional): End time (ISO 8601 or relative like "now")
+- `limit` (optional): Maximum number of history entries
+
+**Returns:** State history entries with timestamps and state transitions (Normal, Pending, Alerting, NoData, Error)
+
 ### `list_provisioned_alert_rules`
 Fetch all alert rules through Grafana's provisioning API (`GET /api/v1/provisioning/alert-rules`) to audit provisioned definitions exactly as stored on the server.
 
@@ -296,6 +352,8 @@ Get current organization information.
 ### `get_current_user`
 Return the profile for the currently authenticated Grafana user (name, login, email, role, theme, etc.).
 
+> **Note:** This endpoint only works with session-based authentication. API keys are service account tokens and are not associated with a user profile - calls will return a 404 error when using API key auth.
+
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 
@@ -323,6 +381,157 @@ List all teams in the organization.
 
 **Returns:** Team list with IDs, names, and member counts
 
+---
+
+## Admin Tools (requires `--allow-admin`)
+
+The following tools are only available when running the server with `--allow-admin`. They require Grafana admin permissions and enable write operations for alert management.
+
+> **Warning:** These tools can create, modify, and delete Grafana resources. Use with caution.
+
+### Alert Rules
+
+#### `create_alert_rule`
+Create a new alert rule via the provisioning API.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `rule` (required): Alert rule definition (JSON object)
+
+**Returns:** Created alert rule with UID
+
+#### `update_alert_rule`
+Update an existing alert rule.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `rule_uid` (required): UID of the alert rule to update
+- `rule` (required): Updated alert rule definition (JSON object)
+
+**Returns:** Updated alert rule
+
+#### `delete_alert_rule`
+Delete an alert rule.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `rule_uid` (required): UID of the alert rule to delete
+
+**Returns:** Confirmation of deletion
+
+#### `update_rule_group`
+Update a rule group's interval configuration.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `folder_uid` (required): UID of the folder containing the rule group
+- `group_name` (required): Name of the rule group
+- `config` (required): Rule group configuration (JSON object with `interval`, etc.)
+
+**Returns:** Updated rule group configuration
+
+### Contact Points
+
+#### `create_contact_point`
+Create a new contact point for alert notifications.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `contact_point` (required): Contact point definition (JSON object)
+
+**Returns:** Created contact point with UID
+
+#### `update_contact_point`
+Update an existing contact point.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `contact_point_uid` (required): UID of the contact point to update
+- `contact_point` (required): Updated contact point definition (JSON object)
+
+**Returns:** Updated contact point
+
+#### `delete_contact_point`
+Delete a contact point.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `contact_point_uid` (required): UID of the contact point to delete
+
+**Returns:** Confirmation of deletion
+
+### Notification Policies
+
+#### `set_notification_policies`
+Set the entire notification policy tree.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `policies` (required): Notification policy tree (JSON object)
+
+**Returns:** Updated notification policies
+
+#### `delete_notification_policies`
+Reset notification policies to default.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+
+**Returns:** Confirmation of reset
+
+### Mute Timings
+
+#### `create_mute_timing`
+Create a new mute timing for silencing alerts.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `mute_timing` (required): Mute timing definition (JSON object)
+
+**Returns:** Created mute timing
+
+#### `update_mute_timing`
+Update an existing mute timing.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `mute_timing_name` (required): Name of the mute timing to update
+- `mute_timing` (required): Updated mute timing definition (JSON object)
+
+**Returns:** Updated mute timing
+
+#### `delete_mute_timing`
+Delete a mute timing.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `mute_timing_name` (required): Name of the mute timing to delete
+
+**Returns:** Confirmation of deletion
+
+### Notification Templates
+
+#### `set_notification_template`
+Create or update a notification template.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `template_name` (required): Name of the template
+- `template` (required): Template definition (JSON object with `template` field)
+
+**Returns:** Created/updated template
+
+#### `delete_notification_template`
+Delete a notification template.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `template_name` (required): Name of the template to delete
+
+**Returns:** Confirmation of deletion
+
+---
+
 ## Configuration Options
 
 ### Connection Settings
@@ -337,36 +546,42 @@ Each connection in `connections.yaml` supports:
 
 ### Environment Variables
 
-- `GRAFANA_SESSION_<CONNECTION_NAME>`: Session token (required)
+- `GRAFANA_SESSION_<CONNECTION_NAME>`: Session token (optional if API key provided)
+- `GRAFANA_API_KEY_<CONNECTION_NAME>`: Grafana API key / service-account token (optional)
 - `GRAFANA_TIMEOUT_<CONNECTION_NAME>`: Override timeout for specific connection
 
 ## Security
 
-The server implements a **read-only security model**:
+The server implements a **secure-by-default model**:
 
-1. **HTTP method restriction** - Only GET requests are performed, no write operations possible
-2. **Timeout protection** - Configurable request timeouts (default: 30s)
-3. **SSL verification** - Enabled by default for all connections
-4. **Session token security** - Tokens stored only in environment variables, never in code
+1. **Read-only by default** - Only GET requests are performed without `--allow-admin`
+2. **Opt-in admin mode** - Write operations require explicit `--allow-admin` flag
+3. **Timeout protection** - Configurable request timeouts (default: 30s)
+4. **SSL verification** - Enabled by default for all connections
+5. **Session token security** - Tokens stored only in environment variables, never in code
 
-### How Read-Only Is Enforced
+### Default Mode (Read-Only)
 
-**Grafana API** - The connector exclusively uses HTTP GET requests. All API methods are implemented through a single `_get()` function that only calls `httpx.AsyncClient.get()`. No write operations (POST, PUT, DELETE, PATCH) are implemented in the codebase.
-
-Grafana's REST API follows standard conventions:
+Without `--allow-admin`, the server only performs HTTP GET requests:
 - **GET** - Read operations only (dashboards, datasources, alerts, users, teams, etc.)
-- **POST** - Create operations (not implemented)
-- **PUT** - Update operations (not implemented)
-- **DELETE** - Delete operations (not implemented)
-- **PATCH** - Partial update operations (not implemented)
+- **POST** - Limited to read-only query execution (`/api/ds/query` for Explore)
 
-Since the connector only implements GET requests, it is **impossible to modify, create, or delete any Grafana resources** through this MCP server.
+It is **impossible to modify, create, or delete any Grafana resources** in default mode.
+
+### Admin Mode (`--allow-admin`)
+
+When running with `--allow-admin`, additional write operations are enabled:
+- **POST** - Create new alert rules, contact points, mute timings
+- **PUT** - Update existing alert rules, contact points, notification policies, mute timings, templates
+- **DELETE** - Remove alert rules, contact points, notification policies, mute timings, templates
+
+> **Warning:** Admin mode enables destructive operations. Only enable when you need to manage Grafana alerting resources. The API key or session must have Grafana admin permissions.
 
 ### Additional Security Considerations
 
-1. **Session tokens are sensitive** - Never commit `.env` or `connections.yaml` to version control
-2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them
-3. **Permission scope** - The server inherits the read permissions of the session token's user account
+1. **Credentials are sensitive** - Never commit `.env` or `connections.yaml` to version control
+2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
+3. **Permission scope** - The server inherits the read permissions of the provided session or API key
 4. **No credential storage** - Tokens are only stored in environment variables and `.env` file
 
 ## Troubleshooting

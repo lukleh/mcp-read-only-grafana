@@ -15,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import ConfigParser, GrafanaConnection
 from .grafana_connector import GrafanaConnector
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
@@ -457,6 +457,10 @@ class ReadOnlyGrafanaServer:
             """
             Get profile information for the authenticated Grafana user.
 
+            Note: This endpoint only works with session-based authentication.
+            API keys are service account tokens and are not associated with a
+            user profile. When using API key auth, this will return a 404 error.
+
             Args:
                 connection_name: Name of the Grafana connection
 
@@ -737,6 +741,117 @@ class ReadOnlyGrafanaServer:
             alerts = await connector.list_alerts(folder_uid=folder_uid)
             return json.dumps(alerts, indent=2)
 
+        # Alert State and Firing Alerts Endpoints
+        @self.mcp.tool()
+        async def get_alert_rules_with_state(
+            connection_name: str,
+            state: Optional[str] = None,
+            rule_name: Optional[str] = None,
+        ) -> str:
+            """
+            Get all alert rules with their current evaluation state.
+
+            This endpoint returns rules organized by namespace with their current state
+            (Normal, Pending, Alerting, NoData, Error). It's the same endpoint used by
+            Grafana's Alert List panel - useful for checking if an alert is working after creation.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                state: Optional filter by state (e.g., "firing", "pending", "inactive")
+                rule_name: Optional filter by rule name (partial match)
+
+            Returns:
+                JSON string with rules organized by namespace, each including state, health, and evaluation info.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            rules = await connector.get_prometheus_rules(state=state, rule_name=rule_name)
+            return json.dumps(rules, indent=2)
+
+        @self.mcp.tool()
+        async def get_firing_alerts(
+            connection_name: str,
+            filter_labels: Optional[List[str]] = None,
+            silenced: Optional[bool] = None,
+            inhibited: Optional[bool] = None,
+            active: Optional[bool] = None,
+        ) -> str:
+            """
+            Get currently firing alert instances from Alertmanager.
+
+            Returns alerts that have transitioned from Pending to Firing state.
+            Use this to see which alerts are actively firing and their details.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                filter_labels: Optional label matchers (e.g., ["alertname=HighCPU", "severity=critical"])
+                silenced: Include silenced alerts (default: true)
+                inhibited: Include inhibited alerts (default: true)
+                active: Include active alerts (default: true)
+
+            Returns:
+                JSON string with list of firing alert instances including labels, annotations, and startsAt.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            alerts = await connector.get_alertmanager_alerts(
+                filter_labels=filter_labels,
+                silenced=silenced,
+                inhibited=inhibited,
+                active=active,
+            )
+            return json.dumps(alerts, indent=2)
+
+        @self.mcp.tool()
+        async def get_alert_state_history(
+            connection_name: str,
+            rule_uid: Optional[str] = None,
+            labels: Optional[Dict[str, str]] = None,
+            from_time: Optional[str] = None,
+            to_time: Optional[str] = None,
+            limit: Optional[int] = None,
+        ) -> str:
+            """
+            Get alert state transition history.
+
+            Returns the history of state changes for alert rules, including
+            transitions between Normal, Pending, Alerting, NoData, and Error states.
+            Useful for debugging alert behavior and understanding evaluation patterns.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                rule_uid: Optional filter by specific rule UID
+                labels: Optional label matchers to filter history
+                from_time: Start time (ISO 8601 or relative like "now-1h")
+                to_time: End time (ISO 8601 or relative like "now")
+                limit: Maximum number of history entries to return
+
+            Returns:
+                JSON string with state history entries including timestamps and state transitions.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            history = await connector.get_alert_state_history(
+                rule_uid=rule_uid,
+                labels=labels,
+                from_time=from_time,
+                to_time=to_time,
+                limit=limit,
+            )
+            return json.dumps(history, indent=2)
+
     def _setup_admin_tools(self):
         """Setup admin-only MCP tools (Provisioning API)
 
@@ -897,26 +1012,6 @@ class ReadOnlyGrafanaServer:
             return json.dumps(contact_points, indent=2)
 
         @self.mcp.tool()
-        async def export_contact_points(connection_name: str) -> str:
-            """
-            [ADMIN] Export all contact points in provisioning format.
-
-            Args:
-                connection_name: Name of the Grafana connection
-
-            Returns:
-                JSON string with contact points in provisioning format.
-            """
-            if connection_name not in self.connectors:
-                raise ValueError(
-                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
-                )
-
-            connector = self.connectors[connection_name]
-            exported = await connector.export_contact_points()
-            return json.dumps(exported, indent=2)
-
-        @self.mcp.tool()
         async def get_notification_policies(connection_name: str) -> str:
             """
             [ADMIN] Get the notification policy tree.
@@ -935,26 +1030,6 @@ class ReadOnlyGrafanaServer:
             connector = self.connectors[connection_name]
             policies = await connector.get_notification_policies()
             return json.dumps(policies, indent=2)
-
-        @self.mcp.tool()
-        async def export_notification_policies(connection_name: str) -> str:
-            """
-            [ADMIN] Export notification policies in provisioning format.
-
-            Args:
-                connection_name: Name of the Grafana connection
-
-            Returns:
-                JSON string with notification policies in provisioning format.
-            """
-            if connection_name not in self.connectors:
-                raise ValueError(
-                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
-                )
-
-            connector = self.connectors[connection_name]
-            exported = await connector.export_notification_policies()
-            return json.dumps(exported, indent=2)
 
         @self.mcp.tool()
         async def list_notification_templates(connection_name: str) -> str:
@@ -1038,16 +1113,25 @@ class ReadOnlyGrafanaServer:
             mute_timing = await connector.get_mute_timing(name)
             return json.dumps(mute_timing, indent=2)
 
+        # Write Operations - Folders
         @self.mcp.tool()
-        async def export_all_mute_timings(connection_name: str) -> str:
+        async def create_folder(
+            connection_name: str,
+            title: str,
+            uid: Optional[str] = None,
+            parent_uid: Optional[str] = None,
+        ) -> str:
             """
-            [ADMIN] Export all mute timings in provisioning format.
+            [ADMIN] Create a new folder in Grafana.
 
             Args:
                 connection_name: Name of the Grafana connection
+                title: The title of the folder
+                uid: Optional unique identifier for the folder
+                parent_uid: Optional parent folder UID (requires nested folders feature)
 
             Returns:
-                JSON string with all mute timings in provisioning format.
+                JSON string with created folder details (uid, title, url, etc.).
             """
             if connection_name not in self.connectors:
                 raise ValueError(
@@ -1055,20 +1139,24 @@ class ReadOnlyGrafanaServer:
                 )
 
             connector = self.connectors[connection_name]
-            exported = await connector.export_all_mute_timings()
-            return json.dumps(exported, indent=2)
+            folder = await connector.create_folder(title, uid, parent_uid)
+            return json.dumps(folder, indent=2)
 
+        # Write Operations - Alert Rules
         @self.mcp.tool()
-        async def export_mute_timing(connection_name: str, name: str) -> str:
+        async def create_alert_rule(
+            connection_name: str, rule: Dict[str, Any]
+        ) -> str:
             """
-            [ADMIN] Export a specific mute timing in provisioning format.
+            [ADMIN] Create a new alert rule.
 
             Args:
                 connection_name: Name of the Grafana connection
-                name: Name of the mute timing
+                rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
+                      condition, data, noDataState, execErrState)
 
             Returns:
-                JSON string with mute timing in provisioning format.
+                JSON string with the created alert rule (including UID).
             """
             if connection_name not in self.connectors:
                 raise ValueError(
@@ -1076,8 +1164,309 @@ class ReadOnlyGrafanaServer:
                 )
 
             connector = self.connectors[connection_name]
-            exported = await connector.export_mute_timing(name)
-            return json.dumps(exported, indent=2)
+            result = await connector.create_alert_rule(rule)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def update_alert_rule(
+            connection_name: str, alert_uid: str, rule: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Update an existing alert rule.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                alert_uid: UID of the alert rule to update
+                rule: Updated alert rule configuration
+
+            Returns:
+                JSON string with the updated alert rule.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.update_alert_rule(alert_uid, rule)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def delete_alert_rule(connection_name: str, alert_uid: str) -> str:
+            """
+            [ADMIN] Delete an alert rule.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                alert_uid: UID of the alert rule to delete
+
+            Returns:
+                JSON string confirming deletion.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.delete_alert_rule(alert_uid)
+            return json.dumps({"status": "deleted", "uid": alert_uid, **result}, indent=2)
+
+        @self.mcp.tool()
+        async def update_rule_group(
+            connection_name: str,
+            folder_uid: str,
+            group: str,
+            config: Dict[str, Any],
+        ) -> str:
+            """
+            [ADMIN] Update a rule group's configuration (interval, rules).
+
+            Args:
+                connection_name: Name of the Grafana connection
+                folder_uid: UID of the folder
+                group: Name of the rule group
+                config: Rule group configuration (folderUid, interval, rules, title)
+
+            Returns:
+                JSON string with the updated rule group.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.update_rule_group_interval(folder_uid, group, config)
+            return json.dumps(result, indent=2)
+
+        # Write Operations - Contact Points
+        @self.mcp.tool()
+        async def create_contact_point(
+            connection_name: str, contact_point: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Create a new contact point.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                contact_point: Contact point configuration (requires: name, type, settings)
+
+            Returns:
+                JSON string with the created contact point (including UID).
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.create_contact_point(contact_point)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def update_contact_point(
+            connection_name: str, uid: str, contact_point: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Update an existing contact point.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                uid: UID of the contact point to update
+                contact_point: Updated contact point configuration
+
+            Returns:
+                JSON string with the updated contact point.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.update_contact_point(uid, contact_point)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def delete_contact_point(connection_name: str, uid: str) -> str:
+            """
+            [ADMIN] Delete a contact point.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                uid: UID of the contact point to delete
+
+            Returns:
+                JSON string confirming deletion.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.delete_contact_point(uid)
+            return json.dumps({"status": "deleted", "uid": uid, **result}, indent=2)
+
+        # Write Operations - Notification Policies
+        @self.mcp.tool()
+        async def set_notification_policies(
+            connection_name: str, policies: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Set the notification policy tree.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                policies: Notification policy tree configuration (Route object)
+
+            Returns:
+                JSON string with the updated notification policies.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.set_notification_policies(policies)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def delete_notification_policies(connection_name: str) -> str:
+            """
+            [ADMIN] Clear the notification policy tree (reset to defaults).
+
+            Args:
+                connection_name: Name of the Grafana connection
+
+            Returns:
+                JSON string confirming deletion.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.delete_notification_policies()
+            return json.dumps({"status": "deleted", **result}, indent=2)
+
+        # Write Operations - Mute Timings
+        @self.mcp.tool()
+        async def create_mute_timing(
+            connection_name: str, mute_timing: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Create a new mute timing.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                mute_timing: Mute timing configuration (requires: name, time_intervals)
+
+            Returns:
+                JSON string with the created mute timing.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.create_mute_timing(mute_timing)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def update_mute_timing(
+            connection_name: str, name: str, mute_timing: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Update an existing mute timing.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                name: Name of the mute timing to update
+                mute_timing: Updated mute timing configuration
+
+            Returns:
+                JSON string with the updated mute timing.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.update_mute_timing(name, mute_timing)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def delete_mute_timing(connection_name: str, name: str) -> str:
+            """
+            [ADMIN] Delete a mute timing.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                name: Name of the mute timing to delete
+
+            Returns:
+                JSON string confirming deletion.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.delete_mute_timing(name)
+            return json.dumps({"status": "deleted", "name": name, **result}, indent=2)
+
+        # Write Operations - Notification Templates
+        @self.mcp.tool()
+        async def set_notification_template(
+            connection_name: str, name: str, template: Dict[str, Any]
+        ) -> str:
+            """
+            [ADMIN] Create or update a notification template.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                name: Name of the template
+                template: Template configuration (requires: template field with content)
+
+            Returns:
+                JSON string with the created/updated template.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.set_notification_template(name, template)
+            return json.dumps(result, indent=2)
+
+        @self.mcp.tool()
+        async def delete_notification_template(connection_name: str, name: str) -> str:
+            """
+            [ADMIN] Delete a notification template.
+
+            Args:
+                connection_name: Name of the Grafana connection
+                name: Name of the template to delete
+
+            Returns:
+                JSON string confirming deletion.
+            """
+            if connection_name not in self.connectors:
+                raise ValueError(
+                    f"Connection '{connection_name}' not found. Available connections: {', '.join(self.connectors.keys())}"
+                )
+
+            connector = self.connectors[connection_name]
+            result = await connector.delete_notification_template(name)
+            return json.dumps({"status": "deleted", "name": name, **result}, indent=2)
 
     async def cleanup(self):
         """Clean up resources"""

@@ -42,6 +42,10 @@ def test_env_var_name_generation():
             url="https://example.com",
         )
         assert conn.get_env_var_name() == expected_env_var
+        assert (
+            conn.get_api_key_env_var_name()
+            == expected_env_var.replace("SESSION", "API_KEY")
+        )
 
 
 def test_url_trailing_slash_removed():
@@ -71,6 +75,7 @@ def test_config_parser_valid_yaml():
         import os
 
         os.environ["GRAFANA_SESSION_TEST_GRAFANA"] = "test_token_123"
+        os.environ["GRAFANA_API_KEY_TEST_GRAFANA"] = "api_key_abc"
 
         parser = ConfigParser(config_path)
         connections = parser.load_config()
@@ -83,15 +88,18 @@ def test_config_parser_valid_yaml():
         assert conn.timeout == 60
         assert conn.verify_ssl is False
         assert conn.session_token == "test_token_123"
+        # API key takes precedence for storage but both values should be loaded
+        assert conn.api_key == "api_key_abc"
 
         # Cleanup
         del os.environ["GRAFANA_SESSION_TEST_GRAFANA"]
+        del os.environ["GRAFANA_API_KEY_TEST_GRAFANA"]
     finally:
         Path(config_path).unlink()
 
 
 def test_config_parser_missing_env_var():
-    """Test that missing environment variable raises error"""
+    """Test that missing environment variables raise error when no credentials provided"""
     yaml_content = """
 - connection_name: test_grafana
   url: https://grafana.example.com
@@ -105,11 +113,40 @@ def test_config_parser_missing_env_var():
 
         # Make sure env var doesn't exist
         os.environ.pop("GRAFANA_SESSION_TEST_GRAFANA", None)
+        os.environ.pop("GRAFANA_API_KEY_TEST_GRAFANA", None)
 
         parser = ConfigParser(config_path)
-        with pytest.raises(ValueError, match="Missing session token"):
+        with pytest.raises(ValueError, match="Missing credentials"):
             parser.load_config()
     finally:
+        Path(config_path).unlink()
+
+
+def test_config_parser_api_key_only():
+    """Test parsing config when only API key is provided"""
+    yaml_content = """
+- connection_name: test_grafana
+  url: https://grafana.example.com
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        config_path = f.name
+
+    try:
+        import os
+
+        os.environ.pop("GRAFANA_SESSION_TEST_GRAFANA", None)
+        os.environ["GRAFANA_API_KEY_TEST_GRAFANA"] = "only_api_key"
+
+        parser = ConfigParser(config_path)
+        connections = parser.load_config()
+
+        assert len(connections) == 1
+        conn = connections[0]
+        assert conn.session_token is None
+        assert conn.api_key == "only_api_key"
+    finally:
+        os.environ.pop("GRAFANA_API_KEY_TEST_GRAFANA", None)
         Path(config_path).unlink()
 
 
@@ -130,3 +167,4 @@ def test_default_values():
     assert conn.timeout == 30
     assert conn.verify_ssl is True
     assert conn.session_token is None
+    assert conn.api_key is None

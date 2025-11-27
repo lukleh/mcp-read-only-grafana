@@ -29,7 +29,9 @@
   verify_ssl: false
 
 # Notes:
-# - Session tokens are read from environment variables: GRAFANA_SESSION_<CONNECTION_NAME>
+# - Credentials are read from environment variables:
+#     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME>
+#     - API key (Bearer): GRAFANA_API_KEY_<CONNECTION_NAME>
 # - Connection names should use only letters, numbers, and underscores
 # - URLs should not include trailing slashes
 # - All connections are read-only - only GET requests are allowed

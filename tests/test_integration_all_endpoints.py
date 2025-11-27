@@ -42,6 +42,7 @@ def handle_errors_gracefully(func):
     - 403: Permission denied
     - 404: Endpoint not found / no data
     - 401: Authentication failed
+    - 500: Server-side errors (Grafana internal issues)
     """
 
     @functools.wraps(func)
@@ -62,6 +63,8 @@ def handle_errors_gracefully(func):
                 pytest.skip(f"Authentication failed: {error_msg}")
             elif "400" in error_msg or "bad request" in error_msg:
                 pytest.skip(f"Query/request invalid for this setup: {error_msg}")
+            elif "500" in error_msg or "internal server error" in error_msg:
+                pytest.skip(f"Grafana server error: {error_msg}")
             raise
 
     return wrapper
@@ -105,7 +108,7 @@ class TestHealthAndBasicInfo:
         result = await grafana_connector.get_health()
 
         assert isinstance(result, dict), "Expected health check response"
-        print(f"\n✓ Grafana health check passed")
+        print("\n✓ Grafana health check passed")
         print(f"  Version: {result.get('version', 'unknown')}")
         print(f"  Database: {result.get('database', 'unknown')}")
 
@@ -328,7 +331,7 @@ class TestQueries:
         )
 
         assert result is not None, "Expected query result"
-        print(f"\n✓ Prometheus query executed successfully")
+        print("\n✓ Prometheus query executed successfully")
 
     @handle_errors_gracefully
     async def test_query_loki(self, grafana_connector):
@@ -357,7 +360,7 @@ class TestQueries:
         )
 
         assert result is not None, "Expected query result"
-        print(f"\n✓ Loki query executed successfully")
+        print("\n✓ Loki query executed successfully")
 
     @handle_errors_gracefully
     async def test_explore_query(self, grafana_connector):
@@ -379,7 +382,7 @@ class TestQueries:
         )
 
         assert result is not None, "Expected query result"
-        print(f"\n✓ Explore query executed successfully")
+        print("\n✓ Explore query executed successfully")
 
 
 @pytest.mark.integration
@@ -433,7 +436,7 @@ class TestAlertingRulerAPI:
         result = await grafana_connector.get_alert_rule_by_uid(alert_uid)
 
         assert isinstance(result, dict), "Expected alert rule object"
-        print(f"\n✓ Retrieved alert rule")
+        print("\n✓ Retrieved alert rule")
 
     @handle_errors_gracefully
     async def test_get_ruler_rules(self, grafana_connector):
@@ -494,6 +497,101 @@ class TestAlertingRulerAPI:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+class TestAlertStateAndFiring:
+    """Test alert state, firing alerts, and history endpoints.
+
+    These endpoints provide visibility into alert evaluation state after creation.
+    """
+
+    @handle_errors_gracefully
+    async def test_get_prometheus_rules(self, grafana_connector):
+        """Test GET /api/prometheus/grafana/api/v1/rules - Get rules with state."""
+        result = await grafana_connector.get_prometheus_rules()
+
+        assert isinstance(result, dict), "Expected dict with status and data"
+        print("\n✓ Retrieved prometheus-compatible rules")
+        if "data" in result and "groups" in result["data"]:
+            groups = result["data"]["groups"]
+            print(f"  Found {len(groups)} rule group(s)")
+            # Show state summary if available
+            states = {}
+            for group in groups:
+                for rule in group.get("rules", []):
+                    state = rule.get("state", "unknown")
+                    states[state] = states.get(state, 0) + 1
+            if states:
+                print(f"  States: {states}")
+
+    @handle_errors_gracefully
+    async def test_get_prometheus_rules_with_state_filter(self, grafana_connector):
+        """Test filtering rules by state."""
+        # Try filtering by "firing" state
+        result = await grafana_connector.get_prometheus_rules(state="firing")
+
+        assert isinstance(result, dict), "Expected dict with status and data"
+        print("\n✓ Retrieved rules filtered by state='firing'")
+
+    @handle_errors_gracefully
+    async def test_get_alertmanager_alerts(self, grafana_connector):
+        """Test GET /api/alertmanager/grafana/api/v2/alerts - Get firing alerts."""
+        result = await grafana_connector.get_alertmanager_alerts()
+
+        assert isinstance(result, list), "Expected list of firing alerts"
+        print(f"\n✓ Retrieved {len(result)} firing alert(s)")
+
+        # Print summary of firing alerts
+        for alert in result[:5]:  # Show first 5
+            labels = alert.get("labels", {})
+            alertname = labels.get("alertname", "unknown")
+            print(f"  - {alertname} (since: {alert.get('startsAt', 'unknown')})")
+
+    @handle_errors_gracefully
+    async def test_get_alertmanager_alerts_with_filter(self, grafana_connector):
+        """Test filtering alerts by labels."""
+        # Try filtering with active=true (default behavior)
+        result = await grafana_connector.get_alertmanager_alerts(active=True)
+
+        assert isinstance(result, list), "Expected list of alerts"
+        print(f"\n✓ Retrieved {len(result)} active alert(s)")
+
+    @handle_errors_gracefully
+    async def test_get_alert_state_history(self, grafana_connector):
+        """Test GET /api/v1/rules/history - Get alert state history."""
+        result = await grafana_connector.get_alert_state_history(limit=10)
+
+        # This endpoint may return dict or list depending on Grafana version
+        assert result is not None, "Expected history response"
+        print("\n✓ Retrieved alert state history")
+
+        # Try to show some history entries if available
+        if isinstance(result, dict) and "results" in result:
+            entries = result["results"]
+            print(f"  Found {len(entries)} history entries")
+        elif isinstance(result, list):
+            print(f"  Found {len(result)} history entries")
+
+    @handle_errors_gracefully
+    async def test_get_alert_state_history_for_rule(self, grafana_connector):
+        """Test getting history for a specific rule."""
+        # Get an alert rule UID first
+        alerts = await grafana_connector.list_alerts()
+        if not alerts:
+            pytest.skip("No alerts available to test history")
+
+        rule_uid = alerts[0].get("uid")
+        if not rule_uid:
+            pytest.skip("Alert missing UID field")
+
+        result = await grafana_connector.get_alert_state_history(
+            rule_uid=rule_uid, limit=10
+        )
+
+        assert result is not None, "Expected history response"
+        print(f"\n✓ Retrieved history for rule {rule_uid}")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 @admin_only
 class TestAlertingProvisioningAPI:
     """Test alerting endpoints using Provisioning API (newer API)."""
@@ -536,7 +634,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_alert_rule(rule_uid)
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported alert rule")
+        print("\n✓ Exported alert rule")
 
     @handle_errors_gracefully
     async def test_export_all_alert_rules(self, grafana_connector):
@@ -544,7 +642,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_all_alert_rules()
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported all alert rules")
+        print("\n✓ Exported all alert rules")
 
     @handle_errors_gracefully
     async def test_get_rule_group(self, grafana_connector):
@@ -582,7 +680,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_rule_group(folder_uid, rule_group)
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported rule group")
+        print("\n✓ Exported rule group")
 
     @handle_errors_gracefully
     async def test_list_contact_points(self, grafana_connector):
@@ -598,7 +696,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_contact_points()
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported contact points")
+        print("\n✓ Exported contact points")
 
     @handle_errors_gracefully
     async def test_get_notification_policies(self, grafana_connector):
@@ -606,7 +704,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.get_notification_policies()
 
         assert isinstance(result, dict), "Expected notification policy tree"
-        print(f"\n✓ Retrieved notification policies")
+        print("\n✓ Retrieved notification policies")
 
     @handle_errors_gracefully
     async def test_export_notification_policies(self, grafana_connector):
@@ -614,7 +712,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_notification_policies()
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported notification policies")
+        print("\n✓ Exported notification policies")
 
     @handle_errors_gracefully
     async def test_list_notification_templates(self, grafana_connector):
@@ -670,7 +768,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_all_mute_timings()
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported all mute timings")
+        print("\n✓ Exported all mute timings")
 
     @handle_errors_gracefully
     async def test_export_mute_timing(self, grafana_connector):
@@ -686,7 +784,7 @@ class TestAlertingProvisioningAPI:
         result = await grafana_connector.export_mute_timing(mute_timing_name)
 
         assert result is not None, "Expected export data"
-        print(f"\n✓ Exported mute timing")
+        print("\n✓ Exported mute timing")
 
 
 @pytest.mark.integration
