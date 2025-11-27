@@ -1,6 +1,6 @@
 import httpx
 import logging
-from typing import Any, Dict, Iterable, List, NoReturn, Optional
+from typing import Any, Dict, Iterable, NoReturn
 from urllib.parse import unquote
 from .config import GrafanaConnection
 from .exceptions import (
@@ -53,8 +53,8 @@ class GrafanaConnector:
     @staticmethod
     def _filter_fields(
         record: Dict[str, Any],
-        requested_fields: Optional[Iterable[str]] = None,
-        allowed_fields: Optional[Iterable[str]] = None,
+        requested_fields: Iterable[str] | None = None,
+        allowed_fields: Iterable[str] | None = None,
     ) -> Dict[str, Any]:
         """
         Project a record to the requested subset of fields.
@@ -146,7 +146,7 @@ class GrafanaConnector:
             )
 
     async def _post(
-        self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
+        self, endpoint: str, json_payload: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
         """Execute a POST request to Grafana API."""
         self._refresh_credentials()
@@ -162,7 +162,7 @@ class GrafanaConnector:
             )
 
     async def _put(
-        self, endpoint: str, json_payload: Optional[Dict[str, Any]] = None
+        self, endpoint: str, json_payload: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
         """Execute a PUT request to Grafana API."""
         self._refresh_credentials()
@@ -248,12 +248,12 @@ class GrafanaConnector:
 
     async def search_dashboards(
         self,
-        query: Optional[str] = None,
-        tag: Optional[str] = None,
-        limit: Optional[int] = None,
-        page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        query: str | None = None,
+        tag: str | None = None,
+        limit: int | None = None,
+        page: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[Dict[str, Any]]:
         """Search for dashboards by name or tag"""
         params = {"type": "dash-db"}
         if query:
@@ -307,7 +307,7 @@ class GrafanaConnector:
             "updated_by": meta.get("updatedBy"),
         }
 
-    async def list_folders(self) -> List[Dict[str, Any]]:
+    async def list_folders(self) -> list[Dict[str, Any]]:
         """List all folders in Grafana"""
         folders = await self._get("/folders")
 
@@ -330,7 +330,7 @@ class GrafanaConnector:
         return formatted_folders
 
     async def create_folder(
-        self, title: str, uid: Optional[str] = None, parent_uid: Optional[str] = None
+        self, title: str, uid: str | None = None, parent_uid: str | None = None
     ) -> Dict[str, Any]:
         """
         Create a new folder in Grafana.
@@ -351,7 +351,7 @@ class GrafanaConnector:
 
         return await self._post("/folders", json_payload=payload)
 
-    async def list_datasources(self) -> List[Dict[str, Any]]:
+    async def list_datasources(self) -> list[Dict[str, Any]]:
         """List all configured data sources"""
         datasources = await self._get("/datasources")
 
@@ -378,8 +378,8 @@ class GrafanaConnector:
         return await self._get(f"/datasources/uid/{datasource_uid}/health")
 
     async def list_alerts(
-        self, folder_uid: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, folder_uid: str | None = None
+    ) -> list[Dict[str, Any]]:
         """List alert rules, optionally filtered by folder"""
         # Get alert rules from the new unified alerting API
         try:
@@ -415,7 +415,7 @@ class GrafanaConnector:
 
         return formatted_alerts
 
-    async def _list_legacy_alerts(self) -> List[Dict[str, Any]]:
+    async def _list_legacy_alerts(self) -> list[Dict[str, Any]]:
         """List legacy alert rules (for older Grafana versions)"""
         try:
             alerts = await self._get("/alerts")
@@ -504,7 +504,7 @@ class GrafanaConnector:
             f"Panel with id {panel_id} not found in dashboard {dashboard_uid}"
         )
 
-    async def get_dashboard_panels(self, dashboard_uid: str) -> List[Dict[str, Any]]:
+    async def get_dashboard_panels(self, dashboard_uid: str) -> list[Dict[str, Any]]:
         """Get simplified panel information from a dashboard"""
         dashboard = await self.get_dashboard(dashboard_uid)
         panels = []
@@ -527,9 +527,9 @@ class GrafanaConnector:
         self,
         datasource_uid: str,
         query: str,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        step: Optional[str] = None,
+        time_from: str | None = None,
+        time_to: str | None = None,
+        step: str | None = None,
     ) -> Dict[str, Any]:
         """Execute a PromQL query against a Prometheus datasource"""
         # Build query parameters
@@ -559,9 +559,9 @@ class GrafanaConnector:
         self,
         datasource_uid: str,
         query: str,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        limit: Optional[int] = 100,
+        time_from: str | None = None,
+        time_to: str | None = None,
+        limit: int | None = 100,
     ) -> Dict[str, Any]:
         """Execute a LogQL query against a Loki datasource"""
         # Build query parameters
@@ -584,12 +584,12 @@ class GrafanaConnector:
 
     async def explore_query(
         self,
-        queries: List[Dict[str, Any]],
-        range_from: Optional[str] = None,
-        range_to: Optional[str] = None,
-        max_data_points: Optional[int] = None,
-        interval_ms: Optional[int] = None,
-        additional_options: Optional[Dict[str, Any]] = None,
+        queries: list[Dict[str, Any]],
+        range_from: str | None = None,
+        range_to: str | None = None,
+        max_data_points: int | None = None,
+        interval_ms: int | None = None,
+        additional_options: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """Execute a Grafana Explore query via /api/ds/query"""
         if not queries:
@@ -638,10 +638,10 @@ class GrafanaConnector:
 
     async def list_users(
         self,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        page: int | None = None,
+        per_page: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[Dict[str, Any]]:
         """List all users in the current organization"""
         params: Dict[str, Any] = {}
         if page is not None:
@@ -662,10 +662,10 @@ class GrafanaConnector:
 
     async def list_teams(
         self,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        page: int | None = None,
+        per_page: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[Dict[str, Any]]:
         """List all teams in the organization"""
         params: Dict[str, Any] = {}
         if page is not None:
@@ -731,8 +731,8 @@ class GrafanaConnector:
     # Prometheus-compatible alerting endpoints (for alert state visibility)
     async def get_prometheus_rules(
         self,
-        state: Optional[str] = None,
-        rule_name: Optional[str] = None,
+        state: str | None = None,
+        rule_name: str | None = None,
     ) -> Dict[str, Any]:
         """
         Get all alert rules with their current evaluation state.
@@ -759,11 +759,11 @@ class GrafanaConnector:
 
     async def get_alertmanager_alerts(
         self,
-        filter_labels: Optional[List[str]] = None,
-        silenced: Optional[bool] = None,
-        inhibited: Optional[bool] = None,
-        active: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
+        filter_labels: list[str] | None = None,
+        silenced: bool | None = None,
+        inhibited: bool | None = None,
+        active: bool | None = None,
+    ) -> list[Dict[str, Any]]:
         """
         Get currently firing alert instances from Alertmanager.
 
@@ -793,11 +793,11 @@ class GrafanaConnector:
 
     async def get_alert_state_history(
         self,
-        rule_uid: Optional[str] = None,
-        labels: Optional[Dict[str, str]] = None,
-        from_time: Optional[str] = None,
-        to_time: Optional[str] = None,
-        limit: Optional[int] = None,
+        rule_uid: str | None = None,
+        labels: Dict[str, str] | None = None,
+        from_time: str | None = None,
+        to_time: str | None = None,
+        limit: int | None = None,
     ) -> Dict[str, Any]:
         """
         Get alert state transition history.
@@ -831,7 +831,7 @@ class GrafanaConnector:
 
         return await self._get("/v1/rules/history", **params)
 
-    async def list_provisioned_alert_rules(self) -> List[Dict[str, Any]]:
+    async def list_provisioned_alert_rules(self) -> list[Dict[str, Any]]:
         """
         Fetch all alert rules from the provisioning API.
 
@@ -966,7 +966,7 @@ class GrafanaConnector:
         )
 
     # Contact Points
-    async def list_contact_points(self) -> List[Dict[str, Any]]:
+    async def list_contact_points(self) -> list[Dict[str, Any]]:
         """
         Get all contact points.
 
@@ -1056,7 +1056,7 @@ class GrafanaConnector:
         return await self._delete("/v1/provisioning/policies")
 
     # Notification Templates
-    async def list_notification_templates(self) -> List[Dict[str, Any]]:
+    async def list_notification_templates(self) -> list[Dict[str, Any]]:
         """
         Get all notification templates.
 
@@ -1108,7 +1108,7 @@ class GrafanaConnector:
         return await self._delete(f"/v1/provisioning/templates/{name}")
 
     # Mute Timings
-    async def list_mute_timings(self) -> List[Dict[str, Any]]:
+    async def list_mute_timings(self) -> list[Dict[str, Any]]:
         """
         Get all mute timings.
 
@@ -1174,10 +1174,10 @@ class GrafanaConnector:
     async def list_folder_dashboards(
         self,
         folder_uid: str,
-        limit: Optional[int] = None,
-        page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        page: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[Dict[str, Any]]:
         """List all dashboards in a specific folder"""
         params = {
             "type": "dash-db",
@@ -1202,11 +1202,11 @@ class GrafanaConnector:
 
     async def list_annotations(
         self,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        dashboard_id: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        time_from: str | None = None,
+        time_to: str | None = None,
+        dashboard_id: int | None = None,
+        tags: list[str] | None = None,
+    ) -> list[Dict[str, Any]]:
         """List annotations for a time range"""
         params = {}
 
@@ -1238,7 +1238,7 @@ class GrafanaConnector:
 
         return formatted_annotations
 
-    async def get_dashboard_versions(self, dashboard_uid: str) -> List[Dict[str, Any]]:
+    async def get_dashboard_versions(self, dashboard_uid: str) -> list[Dict[str, Any]]:
         """Get version history of a dashboard"""
         versions = await self._get(f"/dashboards/uid/{dashboard_uid}/versions")
 
