@@ -1,4 +1,5 @@
 import os
+import tempfile
 import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -86,7 +87,12 @@ class GrafanaConnection(BaseModel):
             self._persist_token_to_env(new_token)
 
     def _persist_token_to_env(self, new_token: str) -> None:
-        """Write updated token back to .env file"""
+        """Write updated token back to .env file using atomic write.
+
+        Uses a temp file + os.replace() pattern to ensure the .env file
+        is never corrupted, even if the process crashes mid-write or
+        multiple processes write concurrently.
+        """
         env_var_name = self.get_env_var_name()
         env_file = Path(".env")
 
@@ -104,9 +110,22 @@ class GrafanaConnection(BaseModel):
                 updated = True
                 break
 
-        # Write back if updated
+        # Atomic write: temp file in same directory, then rename
         if updated:
-            env_file.write_text("\n".join(lines) + "\n")
+            temp_fd, temp_path = tempfile.mkstemp(
+                dir=env_file.parent, prefix=".env_", suffix=".tmp"
+            )
+            try:
+                with os.fdopen(temp_fd, "w") as f:
+                    f.write("\n".join(lines) + "\n")
+                os.replace(temp_path, env_file)
+            except Exception:
+                # Clean up temp file on failure
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
+                raise
 
 
 class ConfigParser:
