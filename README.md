@@ -6,8 +6,8 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 > Default layout:
 > - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
-> - Secrets: `~/.config/lukleh/mcp-read-only-grafana/secrets.env`
-> - Rotated session state: `~/.local/state/lukleh/mcp-read-only-grafana/state.env`
+> - Credentials: injected via the MCP client or shell environment
+> - Rotated session state: `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`
 
 **Compatibility:** Targeted and tested against Grafana 9.5.x. Newer versions (e.g., 10.x) should work for read-only endpoints but may expose extra fields not covered here.
 
@@ -16,7 +16,7 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 - **Read-only by default** - All operations are read-only unless `--allow-admin` is enabled
 - **Optional admin mode** - Enable write operations (create/update/delete alerts) with `--allow-admin` flag
 - **Session-based authentication** - Uses Grafana session cookies for secure access (default) and also supports Grafana API keys
-- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `state.env` (session-cookie mode only)
+- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `session_tokens.json` (session-cookie mode only)
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
 - **Multiple instances** - Support for multiple Grafana connections
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
@@ -61,21 +61,19 @@ Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana
 
 ### 3. Set Up Authentication
 
-Copy the secrets sample:
-
-```bash
-cp secrets.env.example ~/.config/lukleh/mcp-read-only-grafana/secrets.env
-```
+Set credentials in the environment used to launch the server (for example,
+export them in your shell for local testing or inject them via your MCP client
+config).
 
 You can authenticate **either** with a session cookie (auto-rotated) **or** with a Grafana API key (Bearer token):
 
 - Session cookie (default, supports automatic rotation & persistence):
   ```bash
-  GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
+  export GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
   ```
 - API key (no rotation; useful for service accounts or Grafana Cloud tokens):
   ```bash
-  GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
+  export GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
   ```
 
 If both are set, the server will prefer the API key.
@@ -86,15 +84,15 @@ If both are set, the server will prefer the API key.
 2. Open Developer Tools
 3. Go to Application/Storage → Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
-5. Copy the value and paste it into `secrets.env`
+5. Copy the value and export or inject it as `GRAFANA_SESSION_<CONNECTION_NAME>`
 
 #### How to Get a Grafana API Key:
 
 1. In Grafana, go to **Administration → Service Accounts** (or **Configuration → API Keys** on older versions)
 2. Create a key with the minimum required read permissions
-3. Copy the generated token (starts with `glsa_` or similar) and paste it into `secrets.env` as shown above
+3. Copy the generated token (starts with `glsa_` or similar) and export or inject it as `GRAFANA_API_KEY_<CONNECTION_NAME>`
 
-If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/state.env`.
+If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`.
 
 ### 4. Validate and Test Connections
 
@@ -137,6 +135,8 @@ codex mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRA
 ```
 
 Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
+Also configure matching `GRAFANA_SESSION_*` or `GRAFANA_API_KEY_*`
+environment variables in the same MCP entry.
 
 ## Available MCP Tools
 
@@ -593,10 +593,10 @@ When running with `--allow-admin`, additional write operations are enabled:
 
 ### Additional Security Considerations
 
-1. **Credentials are sensitive** - Never commit `secrets.env`, `state.env`, or `connections.yaml` to version control
+1. **Credentials are sensitive** - Never commit real credentials or `connections.yaml` to version control
 2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
 3. **Permission scope** - The server inherits the read permissions of the provided session or API key
-4. **No credential storage in code** - Tokens live only in `secrets.env`, `state.env`, or explicit environment variables
+4. **No credential storage in code** - Tokens live only in explicit environment variables plus the rotated `session_tokens.json` cache
 
 ## Troubleshooting
 
@@ -605,18 +605,18 @@ When running with `--allow-admin`, additional write operations are enabled:
 **Automatic Token Refresh**: Grafana rotates session tokens every 10 minutes. The server automatically:
 - Captures refreshed tokens from Grafana API response headers
 - Updates tokens in memory immediately
-- Persists new tokens back to `state.env`
+- Persists new tokens back to `session_tokens.json`
 - **No manual token updates needed** - the server keeps itself authenticated!
 
 If you manually need to update a token:
-1. Update the `GRAFANA_SESSION_*` value in `secrets.env`
+1. Update the `GRAFANA_SESSION_*` value in your MCP client env or current shell
 2. The new token will be picked up on the next request automatically
 3. No need to restart the MCP server or Claude Desktop
 
 ### Authentication Failed
 
 If you get authentication errors despite automatic refresh:
-1. Verify the initial token is valid in `secrets.env` or `state.env`
+1. Verify the initial token is valid in your current environment or `session_tokens.json`
 2. Check that the state directory is writable (needed for automatic token persistence)
 3. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
 
@@ -624,7 +624,7 @@ If you get authentication errors despite automatic refresh:
 
 If requests are timing out:
 1. Increase the timeout in `connections.yaml`
-2. Or set `GRAFANA_TIMEOUT_<CONNECTION_NAME>` in `secrets.env`
+2. Or set `GRAFANA_TIMEOUT_<CONNECTION_NAME>` in the current environment
 3. Check network connectivity to the Grafana instance
 
 ### SSL Verification Issues

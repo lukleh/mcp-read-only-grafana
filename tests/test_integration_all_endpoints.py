@@ -1,8 +1,8 @@
 """
 Comprehensive integration tests for ALL Grafana MCP endpoints.
 
-These tests run against a real Grafana instance using credentials from .env
-and configuration from connections.yaml.
+These tests run against a real Grafana instance using credentials from the
+current environment and configuration from connections.yaml.
 
 To run these tests:
     pytest tests/test_integration_all_endpoints.py -v -m integration
@@ -12,7 +12,7 @@ To run with admin-only endpoints:
 
 Requirements:
     - connections.yaml must have a 'grafana-ha' connection configured
-    - .env must have GRAFANA_SESSION_GRAFANA_HA set
+    - GRAFANA_SESSION_GRAFANA_HA must be set in the environment
     - (Optional) Set RUN_ADMIN_TESTS=1 to exercise admin-only endpoints
 
 See CLAUDE.md for detailed test configuration and admin test documentation.
@@ -21,12 +21,8 @@ See CLAUDE.md for detailed test configuration and admin test documentation.
 import functools
 import os
 import pytest
-from dotenv import load_dotenv
 from src.config import ConfigParser
 from src.grafana_connector import GrafanaConnector
-
-# Load environment variables from .env
-load_dotenv()
 RUN_ADMIN_TESTS = os.getenv("RUN_ADMIN_TESTS", "").lower() in {"1", "true", "yes", "on"}
 admin_only = pytest.mark.skipif(
     not RUN_ADMIN_TESTS,

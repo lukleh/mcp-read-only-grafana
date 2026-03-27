@@ -36,4 +36,4 @@
 #   If both are set, API key takes precedence.
 # - Connection names should use only letters, numbers, underscores, and hyphens
 # - URLs should not include trailing slashes
-# - Credentials are reloaded from secrets.env/state.env before each request to support token rotation
+# - Credentials are reloaded from the runtime environment and persisted session state before each request to support token rotation
