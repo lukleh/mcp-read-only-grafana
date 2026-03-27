@@ -44,7 +44,6 @@ class ReadOnlyGrafanaServer:
     def _load_connections(self) -> None:
         parser = ConfigParser(
             self.runtime_paths.connections_file,
-            secrets_path=self.runtime_paths.secrets_file,
             state_path=self.runtime_paths.state_file,
         )
 
@@ -106,11 +105,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--config-dir",
-        help="Directory containing connections.yaml and secrets.env",
+        help="Directory containing connections.yaml",
     )
     parser.add_argument(
         "--state-dir",
-        help="Directory containing state.env",
+        help="Directory containing session_tokens.json",
     )
     parser.add_argument(
         "--cache-dir",
@@ -142,8 +141,6 @@ def main() -> None:
     if args.print_paths:
         print(runtime_paths.render())
         return
-
-    runtime_paths.ensure_directories()
 
     server = ReadOnlyGrafanaServer(
         runtime_paths=runtime_paths,

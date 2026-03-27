@@ -22,7 +22,6 @@ async def test_connection(
     try:
         parser = ConfigParser(
             runtime_paths.connections_file,
-            secrets_path=runtime_paths.secrets_file,
             state_path=runtime_paths.state_file,
         )
         connections = parser.load_config()
@@ -42,7 +41,6 @@ async def test_connection(
                 print("Available connections:")
                 parser_again = ConfigParser(
                     runtime_paths.connections_file,
-                    secrets_path=runtime_paths.secrets_file,
                     state_path=runtime_paths.state_file,
                 )
                 all_connections = parser_again.load_config()
@@ -77,7 +75,7 @@ async def test_connection(
                     or "session may have expired" in error_msg.lower()
                 ):
                     print(
-                        "  ❌ Authentication failed - check secrets.env or state.env"
+                        "  ❌ Authentication failed - check MCP-injected env or cached session state"
                     )
                     print(f"     Session variable: {connection.get_env_var_name()}")
                     print(
@@ -122,11 +120,11 @@ def main():
     )
     parser.add_argument(
         "--config-dir",
-        help="Directory containing connections.yaml and secrets.env",
+        help="Directory containing connections.yaml",
     )
     parser.add_argument(
         "--state-dir",
-        help="Directory containing state.env",
+        help="Directory containing session_tokens.json",
     )
     parser.add_argument(
         "--cache-dir",

@@ -21,17 +21,8 @@ class RuntimePaths:
         return self.config_dir / "connections.yaml"
 
     @property
-    def secrets_file(self) -> Path:
-        return self.config_dir / "secrets.env"
-
-    @property
     def state_file(self) -> Path:
-        return self.state_dir / "state.env"
-
-    def ensure_directories(self) -> None:
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        return self.state_dir / "session_tokens.json"
 
     def render(self) -> str:
         return "\n".join(
@@ -40,7 +31,6 @@ class RuntimePaths:
                 f"state_dir={self.state_dir}",
                 f"cache_dir={self.cache_dir}",
                 f"connections_file={self.connections_file}",
-                f"secrets_file={self.secrets_file}",
                 f"state_file={self.state_file}",
             ]
         )
