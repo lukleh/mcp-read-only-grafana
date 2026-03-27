@@ -1,14 +1,73 @@
 import os
 import tempfile
-import yaml
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from typing import Any
+
+import yaml
+from dotenv import dotenv_values
+from pydantic import BaseModel, Field, HttpUrl, PrivateAttr, field_validator
+
+
+def _read_env_file(env_path: Path | None) -> dict[str, str]:
+    if env_path is None or not env_path.exists():
+        return {}
+    return {
+        key: value
+        for key, value in dotenv_values(env_path).items()
+        if key and value is not None
+    }
+
+
+def _merge_credential_sources(
+    secrets_path: Path | None,
+    state_path: Path | None,
+    runtime_env: Mapping[str, str] | None,
+) -> dict[str, str]:
+    merged = _read_env_file(secrets_path)
+    merged.update(_read_env_file(state_path))
+    if runtime_env:
+        merged.update(runtime_env)
+    return merged
+
+
+def _persist_env_value(env_path: Path, env_var_name: str, new_value: str) -> None:
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if env_path.exists():
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    else:
+        lines = []
+
+    updated = False
+    for index, line in enumerate(lines):
+        if line.startswith(f"{env_var_name}="):
+            lines[index] = f"{env_var_name}={new_value}"
+            updated = True
+            break
+
+    if not updated:
+        lines.append(f"{env_var_name}={new_value}")
+
+    temp_fd, temp_path = tempfile.mkstemp(
+        dir=env_path.parent,
+        prefix=f".{env_path.name}_",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(temp_fd, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        os.replace(temp_path, env_path)
+    except Exception:
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+        raise
 
 
 class GrafanaConnection(BaseModel):
-    """Configuration for a single Grafana connection"""
+    """Configuration for a single Grafana connection."""
 
     connection_name: str = Field(
         ..., description="Unique identifier for this connection"
@@ -17,152 +76,131 @@ class GrafanaConnection(BaseModel):
     description: str = Field("", description="Description of this Grafana instance")
     timeout: int = Field(30, description="Request timeout in seconds")
     verify_ssl: bool = Field(True, description="Verify SSL certificates")
-    session_token: Optional[str] = Field(None, description="Grafana session token")
-    api_key: Optional[str] = Field(None, description="Grafana API key (Bearer token)")
+    session_token: str | None = Field(None, description="Grafana session token")
+    api_key: str | None = Field(None, description="Grafana API key (Bearer token)")
+
+    _secrets_path: Path | None = PrivateAttr(default=None)
+    _state_path: Path | None = PrivateAttr(default=None)
+    _runtime_env_provider: Callable[[], Mapping[str, str]] = PrivateAttr(
+        default=os.environ.copy
+    )
 
     @field_validator("connection_name")
-    def validate_connection_name(cls, v):
-        """Ensure connection name is valid for environment variable naming"""
-        if not v.replace("_", "").replace("-", "").isalnum():
+    @classmethod
+    def validate_connection_name(cls, value: str) -> str:
+        """Ensure connection name is valid for environment variable naming."""
+        if not value.replace("_", "").replace("-", "").isalnum():
             raise ValueError(
                 "Connection name must contain only letters, numbers, underscores, and hyphens"
             )
-        return v
+        return value
 
     @field_validator("url")
-    def remove_trailing_slash(cls, v):
-        """Remove trailing slash from URL if present"""
-        url_str = str(v)
-        return url_str.rstrip("/")
+    @classmethod
+    def remove_trailing_slash(cls, value: HttpUrl) -> str:
+        """Remove trailing slash from URL if present."""
+        return str(value).rstrip("/")
+
+    def configure_credential_sources(
+        self,
+        secrets_path: Path | None,
+        state_path: Path | None,
+        runtime_env_provider: Callable[[], Mapping[str, str]] | None = None,
+    ) -> None:
+        self._secrets_path = secrets_path
+        self._state_path = state_path
+        if runtime_env_provider is not None:
+            self._runtime_env_provider = runtime_env_provider
 
     def get_env_var_name(self) -> str:
-        """Get the environment variable name for this connection's session token"""
         return f"GRAFANA_SESSION_{self.connection_name.upper().replace('-', '_')}"
 
     def get_api_key_env_var_name(self) -> str:
-        """Get the environment variable name for this connection's API key"""
         return f"GRAFANA_API_KEY_{self.connection_name.upper().replace('-', '_')}"
 
-    def reload_session_token(self) -> str:
-        """Reload session token from .env file and return it"""
-        load_dotenv(override=True)
-        env_var_name = self.get_env_var_name()
-        session_token = os.getenv(env_var_name)
+    def get_timeout_env_var_name(self) -> str:
+        return f"GRAFANA_TIMEOUT_{self.connection_name.upper().replace('-', '_')}"
 
+    def _load_credential_values(self) -> dict[str, str]:
+        return _merge_credential_sources(
+            self._secrets_path,
+            self._state_path,
+            self._runtime_env_provider(),
+        )
+
+    def reload_session_token(self) -> str:
+        """Reload session token from secrets/state files and runtime environment."""
+        session_token = self._load_credential_values().get(self.get_env_var_name())
         if not session_token:
             raise ValueError(
                 f"Missing session token for connection '{self.connection_name}'. "
-                f"Please set environment variable: {env_var_name}"
+                f"Please set {self.get_env_var_name()} in secrets.env, state.env, or the environment."
             )
-
         self.session_token = session_token
         return session_token
 
     def reload_api_key(self) -> str:
-        """Reload API key from .env file and return it"""
-        load_dotenv(override=True)
-        env_var_name = self.get_api_key_env_var_name()
-        api_key = os.getenv(env_var_name)
-
+        """Reload API key from secrets.env and runtime environment."""
+        api_key = self._load_credential_values().get(self.get_api_key_env_var_name())
         if not api_key:
             raise ValueError(
                 f"Missing API key for connection '{self.connection_name}'. "
-                f"Please set environment variable: {env_var_name}"
+                f"Please set {self.get_api_key_env_var_name()} in secrets.env or the environment."
             )
-
         self.api_key = api_key
         return api_key
 
     def update_session_token(self, new_token: str, persist: bool = True) -> None:
-        """
-        Update session token in memory and optionally persist to .env file
-
-        Args:
-            new_token: New session token value
-            persist: If True, write the new token back to .env file
-        """
+        """Update session token in memory and optionally persist to state.env."""
         self.session_token = new_token
-
         if persist:
-            self._persist_token_to_env(new_token)
+            self._persist_token_to_state(new_token)
 
-    def _persist_token_to_env(self, new_token: str) -> None:
-        """Write updated token back to .env file using atomic write.
-
-        Uses a temp file + os.replace() pattern to ensure the .env file
-        is never corrupted, even if the process crashes mid-write or
-        multiple processes write concurrently.
-        """
-        env_var_name = self.get_env_var_name()
-        env_file = Path(".env")
-
-        if not env_file.exists():
+    def _persist_token_to_state(self, new_token: str) -> None:
+        env_path = self._state_path
+        if env_path is None:
             return
-
-        # Read current .env content
-        lines = env_file.read_text().splitlines()
-        updated = False
-
-        # Update the specific token line
-        for i, line in enumerate(lines):
-            if line.startswith(f"{env_var_name}="):
-                lines[i] = f"{env_var_name}={new_token}"
-                updated = True
-                break
-
-        # Atomic write: temp file in same directory, then rename
-        if updated:
-            temp_fd, temp_path = tempfile.mkstemp(
-                dir=env_file.parent, prefix=".env_", suffix=".tmp"
-            )
-            try:
-                with os.fdopen(temp_fd, "w") as f:
-                    f.write("\n".join(lines) + "\n")
-                os.replace(temp_path, env_file)
-            except Exception:
-                # Clean up temp file on failure
-                try:
-                    os.unlink(temp_path)
-                except OSError:
-                    pass
-                raise
+        _persist_env_value(env_path, self.get_env_var_name(), new_token)
 
 
 class ConfigParser:
-    """Parser for Grafana connections configuration"""
+    """Parser for Grafana connections configuration."""
 
-    def __init__(self, config_path: str = "connections.yaml"):
-        self.config_path = Path(config_path)
+    def __init__(
+        self,
+        config_path: str | Path,
+        *,
+        secrets_path: str | Path | None = None,
+        state_path: str | Path | None = None,
+        runtime_env_provider: Callable[[], Mapping[str, str]] | None = None,
+    ):
+        self.config_path = Path(config_path).expanduser()
+        self.secrets_path = Path(secrets_path).expanduser() if secrets_path else None
+        self.state_path = Path(state_path).expanduser() if state_path else None
+        self.runtime_env_provider = runtime_env_provider or os.environ.copy
 
-    def load_config(self) -> List[GrafanaConnection]:
-        """Load and parse connection configuration from YAML file"""
+    def load_config(self) -> list[GrafanaConnection]:
+        """Load and parse connection configuration from YAML file."""
         if not self.config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
-        with open(self.config_path, "r") as f:
-            raw_config = yaml.safe_load(f) or []
+        with self.config_path.open("r", encoding="utf-8") as handle:
+            raw_config = yaml.safe_load(handle) or []
 
-        connections = []
-        for conn_data in raw_config:
-            connection = self._process_connection(conn_data)
-            connections.append(connection)
+        return [self._process_connection(conn_data) for conn_data in raw_config]
 
-        return connections
-
-    def _process_connection(self, conn_data: Dict[str, Any]) -> GrafanaConnection:
-        """Process a single connection configuration"""
-        # Load .env at startup
-        load_dotenv()
-
-        # Create connection model
+    def _process_connection(self, conn_data: dict[str, Any]) -> GrafanaConnection:
+        """Process a single connection configuration."""
         connection = GrafanaConnection(**conn_data)
+        connection.configure_credential_sources(
+            self.secrets_path,
+            self.state_path,
+            self.runtime_env_provider,
+        )
 
-        # Load credentials from environment
-        # API key takes precedence over session token if both are set
-        env_var_name = connection.get_env_var_name()
-        session_token = os.getenv(env_var_name)
-        api_key_env_var = connection.get_api_key_env_var_name()
-        api_key = os.getenv(api_key_env_var)
+        env_values = connection._load_credential_values()
+        session_token = env_values.get(connection.get_env_var_name())
+        api_key = env_values.get(connection.get_api_key_env_var_name())
 
         if session_token:
             connection.session_token = session_token
@@ -172,18 +210,15 @@ class ConfigParser:
         if not (session_token or api_key):
             raise ValueError(
                 f"Missing credentials for connection '{connection.connection_name}'. "
-                f"Please set either session token env var ({env_var_name}) or API key env var ({api_key_env_var})."
+                f"Please set {connection.get_env_var_name()} in state.env/secrets.env "
+                f"or {connection.get_api_key_env_var_name()} in secrets.env or the environment."
             )
 
-        # Load optional timeout override from environment
-        timeout_env_var = (
-            f"GRAFANA_TIMEOUT_{connection.connection_name.upper().replace('-', '_')}"
-        )
-        timeout_override = os.getenv(timeout_env_var)
+        timeout_override = env_values.get(connection.get_timeout_env_var_name())
         if timeout_override:
             try:
                 connection.timeout = int(timeout_override)
             except ValueError:
-                pass  # Keep default if invalid
+                pass
 
         return connection

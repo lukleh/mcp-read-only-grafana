@@ -4,6 +4,11 @@
 
 A secure MCP (Model Context Protocol) server that provides access to Grafana instances using session authentication or API keys.
 
+> Default layout:
+> - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+> - Secrets: `~/.config/lukleh/mcp-read-only-grafana/secrets.env`
+> - Rotated session state: `~/.local/state/lukleh/mcp-read-only-grafana/state.env`
+
 **Compatibility:** Targeted and tested against Grafana 9.5.x. Newer versions (e.g., 10.x) should work for read-only endpoints but may expose extra fields not covered here.
 
 ## Features
@@ -11,7 +16,7 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 - **Read-only by default** - All operations are read-only unless `--allow-admin` is enabled
 - **Optional admin mode** - Enable write operations (create/update/delete alerts) with `--allow-admin` flag
 - **Session-based authentication** - Uses Grafana session cookies for secure access (default) and also supports Grafana API keys
-- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `.env` (session-cookie mode only)
+- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `state.env` (session-cookie mode only)
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
 - **Multiple instances** - Support for multiple Grafana connections
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
@@ -33,13 +38,20 @@ uv sync
 
 ### 2. Configure Grafana Connections
 
+Create the config and state directories:
+
+```bash
+mkdir -p ~/.config/lukleh/mcp-read-only-grafana
+mkdir -p ~/.local/state/lukleh/mcp-read-only-grafana
+```
+
 Copy the sample configuration file:
 
 ```bash
-cp connections.yaml.sample connections.yaml
+cp connections.yaml.sample ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
 ```
 
-Edit `connections.yaml` with your Grafana instances:
+Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana instances:
 
 ```yaml
 - connection_name: production_grafana
@@ -49,10 +61,10 @@ Edit `connections.yaml` with your Grafana instances:
 
 ### 3. Set Up Authentication
 
-Create a `.env` file from the sample:
+Copy the secrets sample:
 
 ```bash
-cp .env.sample .env
+cp secrets.env.example ~/.config/lukleh/mcp-read-only-grafana/secrets.env
 ```
 
 You can authenticate **either** with a session cookie (auto-rotated) **or** with a Grafana API key (Bearer token):
@@ -74,19 +86,24 @@ If both are set, the server will prefer the API key.
 2. Open Developer Tools
 3. Go to Application/Storage → Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
-5. Copy the value and paste it in the `.env` file
+5. Copy the value and paste it into `secrets.env`
 
 #### How to Get a Grafana API Key:
 
 1. In Grafana, go to **Administration → Service Accounts** (or **Configuration → API Keys** on older versions)
 2. Create a key with the minimum required read permissions
-3. Copy the generated token (starts with `glsa_` or similar) and paste it into `.env` as shown above
+3. Copy the generated token (starts with `glsa_` or similar) and paste it into `secrets.env` as shown above
+
+If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/state.env`.
 
 ### 4. Validate and Test Connections
 
 ```bash
 # Validate configuration file
 just validate
+
+# Show the exact paths in use
+just print-paths
 
 # Test Grafana connectivity
 just test-connection              # Test all connections
@@ -100,11 +117,11 @@ Run the server manually to test:
 ```bash
 just run
 
-# Or with a custom config file
-just run /path/to/connections.yaml
-
 # Enable admin mode for write operations (alert management)
-just run --allow-admin
+uv run -- python -m src.server --allow-admin
+
+# Point the server at a different config directory
+uv run -- python -m src.server --config-dir /path/to/config-dir
 ```
 
 ### 6. Add MCP to Your AI Assistant
@@ -576,10 +593,10 @@ When running with `--allow-admin`, additional write operations are enabled:
 
 ### Additional Security Considerations
 
-1. **Credentials are sensitive** - Never commit `.env` or `connections.yaml` to version control
+1. **Credentials are sensitive** - Never commit `secrets.env`, `state.env`, or `connections.yaml` to version control
 2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
 3. **Permission scope** - The server inherits the read permissions of the provided session or API key
-4. **No credential storage** - Tokens are only stored in environment variables and `.env` file
+4. **No credential storage in code** - Tokens live only in `secrets.env`, `state.env`, or explicit environment variables
 
 ## Troubleshooting
 
@@ -588,26 +605,26 @@ When running with `--allow-admin`, additional write operations are enabled:
 **Automatic Token Refresh**: Grafana rotates session tokens every 10 minutes. The server automatically:
 - Captures refreshed tokens from Grafana API response headers
 - Updates tokens in memory immediately
-- Persists new tokens back to `.env` file
+- Persists new tokens back to `state.env`
 - **No manual token updates needed** - the server keeps itself authenticated!
 
 If you manually need to update a token:
-1. Update the `GRAFANA_SESSION_*` value in `.env`
+1. Update the `GRAFANA_SESSION_*` value in `secrets.env`
 2. The new token will be picked up on the next request automatically
 3. No need to restart the MCP server or Claude Desktop
 
 ### Authentication Failed
 
 If you get authentication errors despite automatic refresh:
-1. Verify the initial token is valid in `.env`
-2. Check that the `.env` file is writable (needed for automatic token persistence)
+1. Verify the initial token is valid in `secrets.env` or `state.env`
+2. Check that the state directory is writable (needed for automatic token persistence)
 3. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
 
 ### Connection Timeout
 
 If requests are timing out:
 1. Increase the timeout in `connections.yaml`
-2. Or set `GRAFANA_TIMEOUT_<CONNECTION_NAME>` in `.env`
+2. Or set `GRAFANA_TIMEOUT_<CONNECTION_NAME>` in `secrets.env`
 3. Check network connectivity to the Grafana instance
 
 ### SSL Verification Issues

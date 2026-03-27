@@ -23,7 +23,7 @@ class GrafanaConnector:
 
         If both are configured, API key takes precedence.
 
-    Credentials are reloaded from .env before each request to support
+    Credentials are reloaded from secrets.env/state.env before each request to support
     token rotation without server restart.
     """
 
@@ -80,7 +80,7 @@ class GrafanaConnector:
         return {field: record[field] for field in requested_list if field in record}
 
     def _refresh_credentials(self) -> None:
-        """Refresh credentials from .env before making a request.
+        """Refresh credentials from secrets.env/state.env before making a request.
 
         Reloads either API key or session token depending on which auth
         method is configured. API key takes precedence if both are set.
@@ -223,7 +223,7 @@ class GrafanaConnector:
                                 f"New: {new_token[:16]}..."
                             )
 
-                            # Update in memory and persist to .env
+                            # Update in memory and persist to state.env
                             self.connection.update_session_token(
                                 new_token, persist=True
                             )
