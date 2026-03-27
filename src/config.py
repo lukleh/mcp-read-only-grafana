@@ -9,6 +9,10 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, Field, HttpUrl, PrivateAttr, field_validator
 
 
+def _copy_runtime_env() -> dict[str, str]:
+    return dict(os.environ)
+
+
 def _read_env_file(env_path: Path | None) -> dict[str, str]:
     if env_path is None or not env_path.exists():
         return {}
@@ -82,7 +86,7 @@ class GrafanaConnection(BaseModel):
     _secrets_path: Path | None = PrivateAttr(default=None)
     _state_path: Path | None = PrivateAttr(default=None)
     _runtime_env_provider: Callable[[], Mapping[str, str]] = PrivateAttr(
-        default=os.environ.copy
+        default_factory=lambda: _copy_runtime_env
     )
 
     @field_validator("connection_name")
@@ -177,7 +181,7 @@ class ConfigParser:
         self.config_path = Path(config_path).expanduser()
         self.secrets_path = Path(secrets_path).expanduser() if secrets_path else None
         self.state_path = Path(state_path).expanduser() if state_path else None
-        self.runtime_env_provider = runtime_env_provider or os.environ.copy
+        self.runtime_env_provider = runtime_env_provider or _copy_runtime_env
 
     def load_config(self) -> list[GrafanaConnection]:
         """Load and parse connection configuration from YAML file."""
