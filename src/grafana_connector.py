@@ -13,29 +13,42 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 SEARCH_DASHBOARD_FIELDS = {
+    "id",
+    "orgId",
     "uid",
     "title",
+    "uri",
     "url",
+    "slug",
     "type",
     "tags",
+    "isStarred",
+    "folderId",
     "folderTitle",
     "folderUid",
+    "folderUrl",
+    "sortMeta",
 }
 
 USER_FIELDS = {
+    "orgId",
     "userId",
+    "avatarUrl",
     "email",
     "name",
     "login",
     "role",
     "lastSeenAt",
     "lastSeenAtAge",
+    "authLabels",
 }
 
 TEAM_FIELDS = {
     "id",
+    "orgId",
     "uid",
     "name",
+    "avatarUrl",
     "email",
     "memberCount",
 }
@@ -90,7 +103,9 @@ class GrafanaConnector:
         Args:
             record: Input record
             requested_fields: Optional subset requested by the caller
-            allowed_fields: Optional set of allowed keys; defaults to record keys
+            allowed_fields: Optional baseline set of supported keys. Record keys are
+                always accepted as well so callers can project fields Grafana
+                actually returned, even if the connector's known schema is older.
 
         Returns:
             Dict limited to the requested fields.
@@ -98,8 +113,9 @@ class GrafanaConnector:
         if not requested_fields:
             return record
 
-        allowed_iterable = allowed_fields or record.keys()
-        allowed = set(allowed_iterable)
+        allowed = set(record.keys())
+        if allowed_fields:
+            allowed.update(allowed_fields)
         requested_list = list(requested_fields)
         invalid = [field for field in requested_list if field not in allowed]
         if invalid:
