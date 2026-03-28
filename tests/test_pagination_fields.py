@@ -272,6 +272,55 @@ async def test_search_dashboards_allows_additional_grafana_search_fields(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_search_dashboards_allows_response_fields_missing_from_other_records(
+    monkeypatch,
+):
+    """Whole-response validation should allow fields present on only some rows."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "uid": "ops",
+                    "title": "Ops",
+                    "customField": "present-on-one-row",
+                },
+                {
+                    "uid": "general",
+                    "title": "General",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.search_dashboards(fields=["uid", "customField"])
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {"uid": "ops", "customField": "present-on-one-row"},
+        {"uid": "general"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_list_folder_dashboards_allows_additional_grafana_search_fields(
     monkeypatch,
 ):
@@ -419,24 +468,25 @@ async def test_list_teams_allows_additional_team_fields(monkeypatch):
     assert teams == [{"orgId": 1, "avatarUrl": "/avatar/team/3"}]
 
 
-def test_field_filtering_rejects_invalid_keys():
-    """Ensures requesting unsupported fields raises a ValueError."""
+def test_validate_requested_fields_rejects_invalid_keys():
+    """Unsupported fields should still fail validation."""
 
     with pytest.raises(ValueError):
-        GrafanaConnector._filter_fields(
-            {"uid": "u1", "title": "Dash"},
+        GrafanaConnector._validate_requested_fields(
+            [{"uid": "u1", "title": "Dash"}],
             requested_fields=["not-real"],
             allowed_fields=["uid", "title"],
         )
 
 
-def test_field_filtering_allows_response_keys_outside_known_baseline():
-    """Response-provided fields should remain projectable even if the baseline schema lags."""
+def test_validate_requested_fields_allows_response_keys_outside_known_baseline():
+    """Validation should accept fields that appear anywhere in the response."""
 
-    projected = GrafanaConnector._filter_fields(
-        {"uid": "u1", "folderUrl": "/dashboards/f/ops"},
-        requested_fields=["folderUrl"],
+    GrafanaConnector._validate_requested_fields(
+        [
+            {"uid": "u1", "customField": "present"},
+            {"uid": "u2"},
+        ],
+        requested_fields=["customField"],
         allowed_fields=["uid"],
     )
-
-    assert projected == {"folderUrl": "/dashboards/f/ops"}
