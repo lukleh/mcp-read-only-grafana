@@ -499,7 +499,9 @@ class GrafanaConnector:
         namespaces = {folder_uid}
         try:
             folder = await self._get(f"/folders/{folder_uid}")
-        except Exception:
+        except GrafanaAPIError as exc:
+            if exc.status_code != 404:
+                raise
             return namespaces
 
         title = folder.get("title")
@@ -781,6 +783,8 @@ class GrafanaConnector:
 
     async def get_alert_rule_by_uid(self, alert_uid: str) -> Dict[str, Any]:
         """Get detailed information about a specific alert rule"""
+        # Grafana's Ruler API exposes rules by namespace/group, so UID lookups
+        # need to scan the aggregated payload and match locally.
         rules = await self._get("/ruler/grafana/api/v1/rules")
 
         for namespace, groups in rules.items():

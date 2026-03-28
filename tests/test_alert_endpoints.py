@@ -5,7 +5,7 @@ import pytest
 
 from src.config import GrafanaConnection
 from src.grafana_connector import GrafanaConnector
-from src.exceptions import GrafanaAPIError
+from src.exceptions import GrafanaAPIError, PermissionDeniedError
 
 
 def create_mock_connector(connection, handler):
@@ -117,6 +117,62 @@ async def test_list_alerts_filters_by_folder_uid_or_title(session_connection):
     await connector.client.aclose()
 
     assert [alert["uid"] for alert in result] == ["ops-1"]
+
+
+@pytest.mark.asyncio
+async def test_list_alerts_falls_back_when_folder_lookup_is_missing(session_connection):
+    """A missing folder lookup should fall back to matching the raw folder UID."""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/folders/folder-1":
+            return httpx.Response(404, text="folder missing")
+        if request.url.path == "/api/ruler/grafana/api/v1/rules":
+            return httpx.Response(
+                200,
+                json={
+                    "folder-1": [
+                        {
+                            "name": "ops-group",
+                            "interval": "1m",
+                            "rules": [{"grafana_alert": {"uid": "ops-1", "title": "Ops"}}],
+                        }
+                    ],
+                    "other-folder": [
+                        {
+                            "name": "other-group",
+                            "interval": "1m",
+                            "rules": [{"grafana_alert": {"uid": "other-1", "title": "Other"}}],
+                        }
+                    ],
+                },
+            )
+        raise AssertionError(f"Unexpected request: {request.url}")
+
+    connector = create_mock_connector(session_connection, handler)
+    result = await connector.list_alerts(folder_uid="folder-1")
+    await connector.client.aclose()
+
+    assert [alert["uid"] for alert in result] == ["ops-1"]
+
+
+@pytest.mark.asyncio
+async def test_list_alerts_propagates_non_404_folder_lookup_errors(session_connection):
+    """Folder lookup failures other than 404 should still surface to callers."""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/folders/folder-1":
+            return httpx.Response(403, text="forbidden")
+        if request.url.path == "/api/ruler/grafana/api/v1/rules":
+            return httpx.Response(200, json={"folder-1": []})
+        raise AssertionError(f"Unexpected request: {request.url}")
+
+    connector = create_mock_connector(session_connection, handler)
+
+    with pytest.raises(PermissionDeniedError) as exc_info:
+        await connector.list_alerts(folder_uid="folder-1")
+
+    await connector.client.aclose()
+    assert "read" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
