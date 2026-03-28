@@ -81,7 +81,7 @@ def register_user_tools(
             connection_name: Name of the Grafana connection
             page: Optional page number (1-indexed)
             per_page: Optional page size
-            fields: Optional subset of Grafana fields (userId,email,name,login,role,lastSeenAt,lastSeenAtAge)
+            fields: Optional subset of Grafana org-user fields (for example: orgId,userId,avatarUrl,email,name,login,role,lastSeenAt,lastSeenAtAge,authLabels)
 
         Returns:
             JSON string with list of users.
@@ -106,7 +106,7 @@ def register_user_tools(
             connection_name: Name of the Grafana connection
             page: Optional page number
             per_page: Optional page size
-            fields: Optional subset of Grafana fields (id,uid,name,email,memberCount)
+            fields: Optional subset of Grafana team fields (for example: id,orgId,uid,name,avatarUrl,email,memberCount)
 
         Returns:
             JSON string with list of teams.

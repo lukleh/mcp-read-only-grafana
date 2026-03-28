@@ -45,7 +45,7 @@ def register_dashboard_tools(
             tag: Optional tag to filter dashboards
             limit: Optional maximum number of results per page
             page: Optional page number (1-indexed)
-            fields: Optional subset of Grafana fields to return (uid,title,url,type,tags,folderTitle,folderUid)
+            fields: Optional subset of Grafana search fields to return (for example: id,orgId,uid,title,uri,url,slug,type,tags,isStarred,folderId,folderUid,folderTitle,folderUrl)
 
         Returns:
             JSON string with list of matching dashboards.
@@ -173,7 +173,7 @@ def register_dashboard_tools(
             folder_uid: UID of the folder
             limit: Optional maximum results per page
             page: Optional page number
-            fields: Optional subset of Grafana fields to return (uid,title,url,tags,folderUid)
+            fields: Optional subset of Grafana search fields to return (for example: id,orgId,uid,title,uri,url,slug,type,tags,isStarred,folderId,folderUid,folderTitle,folderUrl)
 
         Returns:
             JSON string with list of dashboards in the folder.

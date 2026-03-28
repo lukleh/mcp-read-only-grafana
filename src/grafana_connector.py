@@ -12,6 +12,47 @@ from .exceptions import (
 
 logger = logging.getLogger(__name__)
 
+SEARCH_DASHBOARD_FIELDS = {
+    "id",
+    "orgId",
+    "uid",
+    "title",
+    "uri",
+    "url",
+    "slug",
+    "type",
+    "tags",
+    "isStarred",
+    "folderId",
+    "folderTitle",
+    "folderUid",
+    "folderUrl",
+    "sortMeta",
+}
+
+USER_FIELDS = {
+    "orgId",
+    "userId",
+    "avatarUrl",
+    "email",
+    "name",
+    "login",
+    "role",
+    "lastSeenAt",
+    "lastSeenAtAge",
+    "authLabels",
+}
+
+TEAM_FIELDS = {
+    "id",
+    "orgId",
+    "uid",
+    "name",
+    "avatarUrl",
+    "email",
+    "memberCount",
+}
+
 
 class GrafanaConnector:
     """Async client for Grafana API.
@@ -51,10 +92,38 @@ class GrafanaConnector:
         await self.client.aclose()
 
     @staticmethod
+    def _validate_requested_fields(
+        records: Iterable[Dict[str, Any]],
+        requested_fields: Iterable[str] | None = None,
+        allowed_fields: Iterable[str] | None = None,
+    ) -> None:
+        """
+        Validate requested projection fields against the overall response shape.
+
+        Args:
+            records: Response records to inspect
+            requested_fields: Optional subset requested by the caller
+            allowed_fields: Optional baseline set of known sparse keys that may
+                be valid even when they are absent from the current response page
+        """
+        if not requested_fields:
+            return
+
+        allowed = set()
+        if allowed_fields:
+            allowed.update(allowed_fields)
+        for record in records:
+            allowed.update(record.keys())
+
+        requested_list = list(requested_fields)
+        invalid = [field for field in requested_list if field not in allowed]
+        if invalid:
+            raise ValueError(f"Unsupported field(s) requested: {', '.join(invalid)}")
+
+    @staticmethod
     def _filter_fields(
         record: Dict[str, Any],
         requested_fields: Iterable[str] | None = None,
-        allowed_fields: Iterable[str] | None = None,
     ) -> Dict[str, Any]:
         """
         Project a record to the requested subset of fields.
@@ -62,7 +131,6 @@ class GrafanaConnector:
         Args:
             record: Input record
             requested_fields: Optional subset requested by the caller
-            allowed_fields: Optional set of allowed keys; defaults to record keys
 
         Returns:
             Dict limited to the requested fields.
@@ -70,13 +138,7 @@ class GrafanaConnector:
         if not requested_fields:
             return record
 
-        allowed_iterable = allowed_fields or record.keys()
-        allowed = set(allowed_iterable)
         requested_list = list(requested_fields)
-        invalid = [field for field in requested_list if field not in allowed]
-        if invalid:
-            raise ValueError(f"Unsupported field(s) requested: {', '.join(invalid)}")
-
         return {field: record[field] for field in requested_list if field in record}
 
     def _refresh_credentials(self) -> None:
@@ -266,15 +328,13 @@ class GrafanaConnector:
             params["page"] = page
 
         results = await self._get("/search", **params)
+        records = [dict(dashboard) for dashboard in results]
 
-        projected_results = []
-        for dashboard in results:
-            record = dict(dashboard)
-            if fields:
-                record = self._filter_fields(record, requested_fields=fields)
-            projected_results.append(record)
+        if fields:
+            self._validate_requested_fields(records, fields, SEARCH_DASHBOARD_FIELDS)
+            return [self._filter_fields(record, fields) for record in records]
 
-        return projected_results
+        return records
 
     async def get_dashboard(self, dashboard_uid: str) -> Dict[str, Any]:
         """Get full dashboard definition by UID"""
@@ -656,15 +716,13 @@ class GrafanaConnector:
             params["perpage"] = per_page
 
         users = await self._get("/org/users", **params)
+        records = [dict(user) for user in users]
 
-        formatted_users = []
-        for user in users:
-            record = dict(user)
-            if fields:
-                record = self._filter_fields(record, requested_fields=fields)
-            formatted_users.append(record)
+        if fields:
+            self._validate_requested_fields(records, fields, USER_FIELDS)
+            return [self._filter_fields(record, fields) for record in records]
 
-        return formatted_users
+        return records
 
     async def list_teams(
         self,
@@ -681,15 +739,13 @@ class GrafanaConnector:
 
         result = await self._get("/teams/search", **params)
         teams = result.get("teams", [])
+        records = [dict(team) for team in teams]
 
-        formatted_teams = []
-        for team in teams:
-            record = dict(team)
-            if fields:
-                record = self._filter_fields(record, requested_fields=fields)
-            formatted_teams.append(record)
+        if fields:
+            self._validate_requested_fields(records, fields, TEAM_FIELDS)
+            return [self._filter_fields(record, fields) for record in records]
 
-        return formatted_teams
+        return records
 
     async def get_alert_rule_by_uid(self, alert_uid: str) -> Dict[str, Any]:
         """Get detailed information about a specific alert rule"""
@@ -1196,15 +1252,13 @@ class GrafanaConnector:
             params["page"] = page
 
         results = await self._get("/search", **params)
+        records = [dict(dashboard) for dashboard in results]
 
-        formatted_dashboards = []
-        for dashboard in results:
-            record = dict(dashboard)
-            if fields:
-                record = self._filter_fields(record, requested_fields=fields)
-            formatted_dashboards.append(record)
+        if fields:
+            self._validate_requested_fields(records, fields, SEARCH_DASHBOARD_FIELDS)
+            return [self._filter_fields(record, fields) for record in records]
 
-        return formatted_dashboards
+        return records
 
     async def list_annotations(
         self,

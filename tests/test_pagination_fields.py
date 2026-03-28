@@ -110,12 +110,383 @@ async def test_list_users_supports_pagination_and_field_projection(monkeypatch):
     assert users == [{"userId": 1, "email": "ops@example.com"}]
 
 
-def test_field_filtering_rejects_invalid_keys():
-    """Ensures requesting unsupported fields raises a ValueError."""
+@pytest.mark.asyncio
+async def test_list_users_tolerates_missing_optional_fields(monkeypatch):
+    """Optional fields should not fail projection when omitted by Grafana."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "userId": 1,
+                    "name": "Alice",
+                    "lastSeenAtAge": "1d",
+                },
+                {
+                    "userId": 2,
+                    "name": "Bob",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    users = await connector.list_users(fields=["userId", "lastSeenAtAge"])
+    await connector.client.aclose()
+
+    assert users == [
+        {"userId": 1, "lastSeenAtAge": "1d"},
+        {"userId": 2},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_search_dashboards_tolerates_missing_optional_fields(monkeypatch):
+    """Dashboard field projection should allow optional folder metadata."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "uid": "general",
+                    "title": "General",
+                    "url": "/d/general",
+                    "type": "dash-db",
+                    "tags": [],
+                },
+                {
+                    "uid": "ops",
+                    "title": "Ops",
+                    "url": "/d/ops",
+                    "type": "dash-db",
+                    "tags": ["ops"],
+                    "folderUid": "folder-1",
+                    "folderTitle": "Ops Folder",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.search_dashboards(fields=["uid", "folderUid"])
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {"uid": "general"},
+        {"uid": "ops", "folderUid": "folder-1"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_search_dashboards_allows_additional_grafana_search_fields(monkeypatch):
+    """Dashboard search projection should preserve broader Grafana response fields."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "id": 7,
+                    "orgId": 1,
+                    "uid": "ops",
+                    "title": "Ops",
+                    "uri": "db/ops",
+                    "url": "/d/ops",
+                    "slug": "ops",
+                    "type": "dash-db",
+                    "tags": ["ops"],
+                    "isStarred": False,
+                    "folderId": 10,
+                    "folderUid": "folder-1",
+                    "folderTitle": "Ops Folder",
+                    "folderUrl": "/dashboards/f/folder-1/ops-folder",
+                }
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.search_dashboards(
+        fields=["id", "folderUrl", "uri", "isStarred"]
+    )
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {
+            "id": 7,
+            "folderUrl": "/dashboards/f/folder-1/ops-folder",
+            "uri": "db/ops",
+            "isStarred": False,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_search_dashboards_allows_response_fields_missing_from_other_records(
+    monkeypatch,
+):
+    """Whole-response validation should allow fields present on only some rows."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "uid": "ops",
+                    "title": "Ops",
+                    "customField": "present-on-one-row",
+                },
+                {
+                    "uid": "general",
+                    "title": "General",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.search_dashboards(fields=["uid", "customField"])
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {"uid": "ops", "customField": "present-on-one-row"},
+        {"uid": "general"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_folder_dashboards_allows_additional_grafana_search_fields(
+    monkeypatch,
+):
+    """Folder dashboard projection should accept the broader Grafana search schema."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["folderUids"] == "folder-1"
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "id": 9,
+                    "uid": "folder-dash",
+                    "title": "Folder Dash",
+                    "uri": "db/folder-dash",
+                    "url": "/d/folder-dash",
+                    "type": "dash-db",
+                    "folderId": 10,
+                    "folderUid": "folder-1",
+                    "folderTitle": "Ops Folder",
+                    "folderUrl": "/dashboards/f/folder-1/ops-folder",
+                }
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.list_folder_dashboards(
+        "folder-1", fields=["id", "folderUrl", "folderId"]
+    )
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {
+            "id": 9,
+            "folderUrl": "/dashboards/f/folder-1/ops-folder",
+            "folderId": 10,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_users_allows_additional_org_user_fields(monkeypatch):
+    """Org user projection should preserve valid Grafana fields beyond the narrow core."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "orgId": 1,
+                    "userId": 11,
+                    "avatarUrl": "/avatar/11",
+                    "email": "ops@example.com",
+                    "name": "Ops",
+                    "login": "ops",
+                    "role": "Viewer",
+                }
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    users = await connector.list_users(fields=["orgId", "avatarUrl"])
+    await connector.client.aclose()
+
+    assert users == [{"orgId": 1, "avatarUrl": "/avatar/11"}]
+
+
+@pytest.mark.asyncio
+async def test_list_teams_allows_additional_team_fields(monkeypatch):
+    """Team projection should preserve valid Grafana fields beyond the narrow core."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "teams": [
+                    {
+                        "id": 3,
+                        "orgId": 1,
+                        "uid": "ops-team",
+                        "name": "Ops",
+                        "avatarUrl": "/avatar/team/3",
+                        "email": "ops@example.com",
+                        "memberCount": 4,
+                    }
+                ]
+            },
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    teams = await connector.list_teams(fields=["orgId", "avatarUrl"])
+    await connector.client.aclose()
+
+    assert teams == [{"orgId": 1, "avatarUrl": "/avatar/team/3"}]
+
+
+def test_validate_requested_fields_rejects_invalid_keys():
+    """Unsupported fields should still fail validation."""
 
     with pytest.raises(ValueError):
-        GrafanaConnector._filter_fields(
-            {"uid": "u1", "title": "Dash"},
+        GrafanaConnector._validate_requested_fields(
+            [{"uid": "u1", "title": "Dash"}],
             requested_fields=["not-real"],
             allowed_fields=["uid", "title"],
         )
+
+
+def test_validate_requested_fields_allows_response_keys_outside_known_baseline():
+    """Validation should accept fields that appear anywhere in the response."""
+
+    GrafanaConnector._validate_requested_fields(
+        [
+            {"uid": "u1", "customField": "present"},
+            {"uid": "u2"},
+        ],
+        requested_fields=["customField"],
+        allowed_fields=["uid"],
+    )
