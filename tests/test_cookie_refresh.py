@@ -118,3 +118,24 @@ def test_multiple_set_cookie_headers():
 
     # Should extract the grafana_session cookie
     assert connector.connection.session_token == "new_token_789"
+
+
+def test_api_key_auth_ignores_session_cookie_rotation():
+    """Session cookie refresh should be ignored when API key auth is active."""
+    conn = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="old_token",
+        api_key="api-key",
+    )
+    connector = GrafanaConnector(conn)
+
+    mock_response = httpx.Response(
+        status_code=200,
+        headers={"set-cookie": "grafana_session=new_token_456; Path=/"},
+        content=b'{"status": "ok"}',
+    )
+
+    connector._check_and_update_session_cookie(mock_response)
+
+    assert connector.connection.session_token == "old_token"

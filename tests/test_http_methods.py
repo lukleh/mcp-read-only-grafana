@@ -352,3 +352,35 @@ async def test_handle_http_error_other(session_connection):
     await connector.close()
     assert exc_info.value.status_code == 503
     assert "Service Unavailable" in exc_info.value.message
+
+
+@pytest.mark.asyncio
+async def test_get_timeout_raises_grafana_timeout_error(session_connection):
+    """GET requests should normalize httpx timeouts."""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    connector = create_mock_connector(session_connection, handler)
+
+    with pytest.raises(GrafanaTimeoutError):
+        await connector._get("/test/endpoint")
+
+    await connector.client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_get_request_error_raises_grafana_api_error(session_connection):
+    """Non-timeout transport failures should use the project error type."""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    connector = create_mock_connector(session_connection, handler)
+
+    with pytest.raises(GrafanaAPIError) as exc_info:
+        await connector._get("/test/endpoint")
+
+    await connector.client.aclose()
+    assert exc_info.value.status_code == 0
+    assert "connection refused" in exc_info.value.message

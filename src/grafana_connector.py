@@ -154,7 +154,7 @@ class GrafanaConnector:
             session_token = self.connection.reload_session_token()
             self.client.cookies.set("grafana_session", session_token)
 
-    def _handle_response(self, response: httpx.Response) -> Dict[str, Any]:
+    def _handle_response(self, response: httpx.Response) -> Any:
         """Process a successful response: check cookie refresh, parse JSON.
 
         Args:
@@ -193,7 +193,15 @@ class GrafanaConnector:
                 self.connection.connection_name,
             )
 
-    async def _get(self, endpoint: str, **params) -> Dict[str, Any]:
+    def _handle_request_error(self, e: httpx.RequestError) -> NoReturn:
+        """Convert transport-level request errors into the project exception model."""
+        raise GrafanaAPIError(
+            0,
+            f"Request error: {e}",
+            self.connection.connection_name,
+        )
+
+    async def _get(self, endpoint: str, **params) -> Any:
         """Execute a GET request to Grafana API."""
         self._refresh_credentials()
         try:
@@ -206,10 +214,12 @@ class GrafanaConnector:
             raise GrafanaTimeoutError(
                 self.connection.timeout, self.connection.connection_name
             )
+        except httpx.RequestError as e:
+            self._handle_request_error(e)
 
     async def _post(
         self, endpoint: str, json_payload: Dict[str, Any] | None = None
-    ) -> Dict[str, Any]:
+    ) -> Any:
         """Execute a POST request to Grafana API."""
         self._refresh_credentials()
         try:
@@ -222,10 +232,12 @@ class GrafanaConnector:
             raise GrafanaTimeoutError(
                 self.connection.timeout, self.connection.connection_name
             )
+        except httpx.RequestError as e:
+            self._handle_request_error(e)
 
     async def _put(
         self, endpoint: str, json_payload: Dict[str, Any] | None = None
-    ) -> Dict[str, Any]:
+    ) -> Any:
         """Execute a PUT request to Grafana API."""
         self._refresh_credentials()
         try:
@@ -238,8 +250,10 @@ class GrafanaConnector:
             raise GrafanaTimeoutError(
                 self.connection.timeout, self.connection.connection_name
             )
+        except httpx.RequestError as e:
+            self._handle_request_error(e)
 
-    async def _delete(self, endpoint: str) -> Dict[str, Any]:
+    async def _delete(self, endpoint: str) -> Any:
         """Execute a DELETE request to Grafana API."""
         self._refresh_credentials()
         try:
@@ -252,6 +266,8 @@ class GrafanaConnector:
             raise GrafanaTimeoutError(
                 self.connection.timeout, self.connection.connection_name
             )
+        except httpx.RequestError as e:
+            self._handle_request_error(e)
 
     def _check_and_update_session_cookie(self, response: httpx.Response) -> None:
         """
@@ -259,7 +275,7 @@ class GrafanaConnector:
         Grafana rotates session tokens every 10 minutes via Set-Cookie headers.
         """
         # Skip if using API key authentication
-        if not self.connection.session_token:
+        if not self.connection.session_token or self.connection.api_key:
             return
 
         # Look for Set-Cookie headers
@@ -280,9 +296,8 @@ class GrafanaConnector:
                         # Only update if it's different from current token
                         if new_token != self.connection.session_token:
                             logger.info(
-                                f"Session token rotated for {self.connection.connection_name}. "
-                                f"Old: {self.connection.session_token[:16]}... "
-                                f"New: {new_token[:16]}..."
+                                "Session token rotated for %s",
+                                self.connection.connection_name,
                             )
 
                             # Update in memory and persist to cached state
@@ -449,9 +464,13 @@ class GrafanaConnector:
             return await self._list_legacy_alerts()
 
         # Flatten the nested structure and filter by folder if specified
+        allowed_namespaces = None
+        if folder_uid:
+            allowed_namespaces = await self._resolve_folder_namespaces(folder_uid)
+
         formatted_alerts = []
         for namespace, groups in rules.items():
-            if folder_uid and not namespace.startswith(folder_uid):
+            if allowed_namespaces is not None and namespace not in allowed_namespaces:
                 continue
 
             for group in groups:
@@ -474,6 +493,21 @@ class GrafanaConnector:
                     formatted_alerts.append(formatted)
 
         return formatted_alerts
+
+    async def _resolve_folder_namespaces(self, folder_uid: str) -> set[str]:
+        """Match alert namespaces against either folder UID or folder title."""
+        namespaces = {folder_uid}
+        try:
+            folder = await self._get(f"/folders/{folder_uid}")
+        except GrafanaAPIError as exc:
+            if exc.status_code != 404:
+                raise
+            return namespaces
+
+        title = folder.get("title")
+        if isinstance(title, str) and title:
+            namespaces.add(title)
+        return namespaces
 
     async def _list_legacy_alerts(self) -> list[Dict[str, Any]]:
         """List legacy alert rules (for older Grafana versions)"""
@@ -749,8 +783,28 @@ class GrafanaConnector:
 
     async def get_alert_rule_by_uid(self, alert_uid: str) -> Dict[str, Any]:
         """Get detailed information about a specific alert rule"""
-        result = await self._get(f"/ruler/grafana/api/v1/rules/{alert_uid}")
-        return result
+        # Grafana's Ruler API exposes rules by namespace/group, so UID lookups
+        # need to scan the aggregated payload and match locally.
+        rules = await self._get("/ruler/grafana/api/v1/rules")
+
+        for namespace, groups in rules.items():
+            for group in groups:
+                for rule in group.get("rules", []):
+                    grafana_alert = rule.get("grafana_alert", {})
+                    rule_uid = grafana_alert.get("uid") or rule.get("uid")
+                    if rule_uid == alert_uid:
+                        return {
+                            **rule,
+                            "namespace": namespace,
+                            "group": group.get("name"),
+                            "group_interval": group.get("interval"),
+                        }
+
+        raise GrafanaAPIError(
+            404,
+            f"Alert rule not found: {alert_uid}",
+            self.connection.connection_name,
+        )
 
     # Ruler API endpoints (non-admin)
     async def get_ruler_rules(self) -> Dict[str, Any]:
@@ -1274,7 +1328,7 @@ class GrafanaConnector:
             params["from"] = time_from
         if time_to:
             params["to"] = time_to
-        if dashboard_id:
+        if dashboard_id is not None:
             params["dashboardId"] = dashboard_id
         if tags:
             params["tags"] = tags

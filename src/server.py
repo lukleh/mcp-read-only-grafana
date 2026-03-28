@@ -5,6 +5,7 @@ Provides secure read-only access to Grafana instances via MCP protocol.
 """
 
 import argparse
+import asyncio
 import logging
 import sys
 from typing import Dict
@@ -146,6 +147,7 @@ def main() -> None:
         runtime_paths=runtime_paths,
         allow_admin=args.allow_admin,
     )
+    exit_code = 0
 
     try:
         server.run()
@@ -153,7 +155,15 @@ def main() -> None:
         logger.info("Server shutting down...")
     except Exception as exc:
         logger.error("Server error: %s", exc)
-        sys.exit(1)
+        exit_code = 1
+    finally:
+        try:
+            asyncio.run(server.cleanup())
+        except Exception as cleanup_exc:
+            logger.warning("Error during shutdown cleanup: %s", cleanup_exc)
+
+    if exit_code:
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":

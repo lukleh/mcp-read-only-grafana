@@ -92,7 +92,7 @@ If both are set, the server will prefer the API key.
 2. Create a key with the minimum required read permissions
 3. Copy the generated token (starts with `glsa_` or similar) and export or inject it as `GRAFANA_API_KEY_<CONNECTION_NAME>`
 
-If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`.
+If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`. On later requests, that persisted state file takes precedence over the live `GRAFANA_SESSION_*` environment value; clear or update the state file if you need to force a replacement token.
 
 ### 4. Validate and Test Connections
 
@@ -610,8 +610,8 @@ When running with `--allow-admin`, additional write operations are enabled:
 
 If you manually need to update a token:
 1. Update the `GRAFANA_SESSION_*` value in your MCP client env or current shell
-2. The new token will be picked up on the next request automatically
-3. No need to restart the MCP server or Claude Desktop
+2. Also remove or update the cached value in `session_tokens.json` if one was already persisted
+3. No restart is needed once the active credential source has been updated
 
 ### Authentication Failed
 
