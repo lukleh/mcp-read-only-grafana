@@ -110,6 +110,107 @@ async def test_list_users_supports_pagination_and_field_projection(monkeypatch):
     assert users == [{"userId": 1, "email": "ops@example.com"}]
 
 
+@pytest.mark.asyncio
+async def test_list_users_tolerates_missing_optional_fields(monkeypatch):
+    """Optional fields should not fail projection when omitted by Grafana."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "userId": 1,
+                    "name": "Alice",
+                    "lastSeenAtAge": "1d",
+                },
+                {
+                    "userId": 2,
+                    "name": "Bob",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    users = await connector.list_users(fields=["userId", "lastSeenAtAge"])
+    await connector.client.aclose()
+
+    assert users == [
+        {"userId": 1, "lastSeenAtAge": "1d"},
+        {"userId": 2},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_search_dashboards_tolerates_missing_optional_fields(monkeypatch):
+    """Dashboard field projection should allow optional folder metadata."""
+
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "token")
+
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="token",
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "uid": "general",
+                    "title": "General",
+                    "url": "/d/general",
+                    "type": "dash-db",
+                    "tags": [],
+                },
+                {
+                    "uid": "ops",
+                    "title": "Ops",
+                    "url": "/d/ops",
+                    "type": "dash-db",
+                    "tags": ["ops"],
+                    "folderUid": "folder-1",
+                    "folderTitle": "Ops Folder",
+                },
+            ],
+        )
+
+    connector = GrafanaConnector(connection)
+    connector.client = httpx.AsyncClient(
+        base_url=str(connection.url),
+        cookies={"grafana_session": connection.session_token or ""},
+        timeout=connection.timeout,
+        verify=connection.verify_ssl,
+        follow_redirects=True,
+        transport=httpx.MockTransport(handler),
+    )
+
+    dashboards = await connector.search_dashboards(fields=["uid", "folderUid"])
+    await connector.client.aclose()
+
+    assert dashboards == [
+        {"uid": "general"},
+        {"uid": "ops", "folderUid": "folder-1"},
+    ]
+
+
 def test_field_filtering_rejects_invalid_keys():
     """Ensures requesting unsupported fields raises a ValueError."""
 

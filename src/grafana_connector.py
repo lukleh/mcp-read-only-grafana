@@ -12,6 +12,34 @@ from .exceptions import (
 
 logger = logging.getLogger(__name__)
 
+SEARCH_DASHBOARD_FIELDS = {
+    "uid",
+    "title",
+    "url",
+    "type",
+    "tags",
+    "folderTitle",
+    "folderUid",
+}
+
+USER_FIELDS = {
+    "userId",
+    "email",
+    "name",
+    "login",
+    "role",
+    "lastSeenAt",
+    "lastSeenAtAge",
+}
+
+TEAM_FIELDS = {
+    "id",
+    "uid",
+    "name",
+    "email",
+    "memberCount",
+}
+
 
 class GrafanaConnector:
     """Async client for Grafana API.
@@ -271,7 +299,11 @@ class GrafanaConnector:
         for dashboard in results:
             record = dict(dashboard)
             if fields:
-                record = self._filter_fields(record, requested_fields=fields)
+                record = self._filter_fields(
+                    record,
+                    requested_fields=fields,
+                    allowed_fields=SEARCH_DASHBOARD_FIELDS,
+                )
             projected_results.append(record)
 
         return projected_results
@@ -661,7 +693,11 @@ class GrafanaConnector:
         for user in users:
             record = dict(user)
             if fields:
-                record = self._filter_fields(record, requested_fields=fields)
+                record = self._filter_fields(
+                    record,
+                    requested_fields=fields,
+                    allowed_fields=USER_FIELDS,
+                )
             formatted_users.append(record)
 
         return formatted_users
@@ -686,7 +722,11 @@ class GrafanaConnector:
         for team in teams:
             record = dict(team)
             if fields:
-                record = self._filter_fields(record, requested_fields=fields)
+                record = self._filter_fields(
+                    record,
+                    requested_fields=fields,
+                    allowed_fields=TEAM_FIELDS,
+                )
             formatted_teams.append(record)
 
         return formatted_teams
@@ -1201,7 +1241,11 @@ class GrafanaConnector:
         for dashboard in results:
             record = dict(dashboard)
             if fields:
-                record = self._filter_fields(record, requested_fields=fields)
+                record = self._filter_fields(
+                    record,
+                    requested_fields=fields,
+                    allowed_fields=SEARCH_DASHBOARD_FIELDS,
+                )
             formatted_dashboards.append(record)
 
         return formatted_dashboards
