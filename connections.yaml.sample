@@ -37,3 +37,4 @@
 # - Connection names should use only letters, numbers, underscores, and hyphens
 # - URLs should not include trailing slashes
 # - Credentials are reloaded from the runtime environment and persisted session state before each request to support token rotation
+# - If both sources contain a session cookie, the persisted session state wins until you update or remove it
