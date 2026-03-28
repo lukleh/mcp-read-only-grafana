@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./connections.schema.json
 # MCP Read-Only Grafana Server - Connection Configuration Sample
-# Copy this file to connections.yaml and customize for your Grafana instances
+# Copy this file to ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
 
 # Basic Grafana connection
 - connection_name: production_grafana
@@ -36,4 +36,4 @@
 #   If both are set, API key takes precedence.
 # - Connection names should use only letters, numbers, underscores, and hyphens
 # - URLs should not include trailing slashes
-# - Credentials are reloaded from .env before each request to support token rotation
+# - Credentials are reloaded from the runtime environment and persisted session state before each request to support token rotation

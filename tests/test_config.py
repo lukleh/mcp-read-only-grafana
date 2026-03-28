@@ -168,3 +168,17 @@ def test_default_values():
     assert conn.verify_ssl is True
     assert conn.session_token is None
     assert conn.api_key is None
+
+
+def test_direct_connection_reload_uses_runtime_environment(monkeypatch):
+    """Direct GrafanaConnection instances should read credentials from os.environ."""
+    monkeypatch.setenv("GRAFANA_SESSION_TEST", "runtime-session")
+    monkeypatch.setenv("GRAFANA_API_KEY_TEST", "runtime-api-key")
+
+    conn = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+    )
+
+    assert conn.reload_session_token() == "runtime-session"
+    assert conn.reload_api_key() == "runtime-api-key"

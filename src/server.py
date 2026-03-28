@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .config import ConfigParser, GrafanaConnection
 from .grafana_connector import GrafanaConnector
+from .runtime_paths import resolve_runtime_paths, RuntimePaths
 from .tools import (
     register_admin_tools,
     register_alert_tools,
@@ -27,124 +28,131 @@ logger = logging.getLogger(__name__)
 
 
 class ReadOnlyGrafanaServer:
-    """MCP Read-Only Grafana Server using FastMCP"""
+    """MCP Read-Only Grafana Server using FastMCP."""
 
-    def __init__(
-        self, config_path: str = "connections.yaml", allow_admin: bool = False
-    ):
-        """Initialize the server with configuration
-
-        Args:
-            config_path: Path to the connections.yaml configuration file
-            allow_admin: Enable admin-only endpoints (provisioning API). Requires admin permissions.
-        """
-        self.config_path = config_path
+    def __init__(self, runtime_paths: RuntimePaths, allow_admin: bool = False):
+        self.runtime_paths = runtime_paths
         self.allow_admin = allow_admin
         self.connections: Dict[str, GrafanaConnection] = {}
         self.connectors: Dict[str, GrafanaConnector] = {}
 
-        # Initialize FastMCP server
         self.mcp = FastMCP("mcp-read-only-grafana")
 
-        # Load connections
         self._load_connections()
-
-        # Register tools from domain modules
         self._register_tools()
 
-    def _load_connections(self):
-        """Load all connections from config file"""
-        parser = ConfigParser(self.config_path)
+    def _load_connections(self) -> None:
+        parser = ConfigParser(
+            self.runtime_paths.connections_file,
+            state_path=self.runtime_paths.state_file,
+        )
 
         try:
             connections = parser.load_config()
         except FileNotFoundError:
-            logger.warning(f"Configuration file not found: {self.config_path}")
-            logger.info(
-                "Please create a connections.yaml file from connections.yaml.sample"
+            logger.warning(
+                "Configuration file not found: %s",
+                self.runtime_paths.connections_file,
             )
+            logger.info("Expected Grafana config at %s", self.runtime_paths.config_dir)
             return
-        except Exception as e:
-            logger.error(f"Failed to load configuration: {e}")
+        except Exception as exc:
+            logger.error("Failed to load configuration: %s", exc)
             raise
 
-        for conn in connections:
-            self.connections[conn.connection_name] = conn
-            self.connectors[conn.connection_name] = GrafanaConnector(conn)
-            logger.info(f"Loaded connection: {conn.connection_name} ({conn.url})")
+        for connection in connections:
+            self.connections[connection.connection_name] = connection
+            self.connectors[connection.connection_name] = GrafanaConnector(connection)
+            logger.info(
+                "Loaded connection: %s (%s)",
+                connection.connection_name,
+                connection.url,
+            )
 
-    def _register_tools(self):
-        """Register all MCP tools organized by domain."""
-        # Core tools (list_connections, get_health, get_current_org)
+    def _register_tools(self) -> None:
         register_core_tools(self.mcp, self.connectors, self.connections)
-
-        # Dashboard tools
         register_dashboard_tools(self.mcp, self.connectors)
-
-        # Datasource tools
         register_datasource_tools(self.mcp, self.connectors)
-
-        # Alert tools
         register_alert_tools(self.mcp, self.connectors)
-
-        # User/team/annotation tools
         register_user_tools(self.mcp, self.connectors)
 
-        # Admin tools (only if --allow-admin flag is set)
         if self.allow_admin:
             logger.info("Admin endpoints enabled (--allow-admin)")
             register_admin_tools(self.mcp, self.connectors)
         else:
             logger.info("Admin endpoints disabled (use --allow-admin to enable)")
 
-    async def cleanup(self):
-        """Clean up resources"""
+    async def cleanup(self) -> None:
         for connector in self.connectors.values():
             await connector.close()
 
-    def run(self):
-        """Run the FastMCP server"""
+    def run(self) -> None:
         if not self.connections:
             logger.warning(
                 "No connections loaded. Server will run with limited functionality."
             )
         else:
-            logger.info(f"Loaded {len(self.connections)} Grafana connection(s)")
+            logger.info("Loaded %s Grafana connection(s)", len(self.connections))
 
-        # Run the FastMCP server (defaults to stdio transport)
         self.mcp.run()
 
 
-def main():
-    """Main entry point for the MCP server"""
+def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="MCP Read-Only Grafana Server - Secure read-only access to Grafana instances"
+        description=(
+            "MCP Read-Only Grafana Server - Secure read-only access to Grafana instances"
+        )
     )
     parser.add_argument(
-        "config",
-        nargs="?",
-        default="connections.yaml",
-        help="Path to connections.yaml configuration file (default: connections.yaml)",
+        "--config-dir",
+        help="Directory containing connections.yaml",
+    )
+    parser.add_argument(
+        "--state-dir",
+        help="Directory containing session_tokens.json",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        help="Directory reserved for cache files",
+    )
+    parser.add_argument(
+        "--print-paths",
+        action="store_true",
+        help="Print resolved config/state/cache paths and exit",
     )
     parser.add_argument(
         "--allow-admin",
         action="store_true",
         help="Enable admin-only endpoints (Provisioning API). Requires Grafana admin permissions.",
     )
+    return parser
 
+
+def main() -> None:
+    parser = build_arg_parser()
     args = parser.parse_args()
 
-    # Create and run server
+    runtime_paths = resolve_runtime_paths(
+        config_dir=args.config_dir,
+        state_dir=args.state_dir,
+        cache_dir=args.cache_dir,
+    )
+
+    if args.print_paths:
+        print(runtime_paths.render())
+        return
+
     server = ReadOnlyGrafanaServer(
-        config_path=args.config, allow_admin=args.allow_admin
+        runtime_paths=runtime_paths,
+        allow_admin=args.allow_admin,
     )
 
     try:
         server.run()
     except KeyboardInterrupt:
         logger.info("Server shutting down...")
-    except Exception as e:
-        logger.error(f"Server error: {e}")
+    except Exception as exc:
+        logger.error("Server error: %s", exc)
         sys.exit(1)
 
 

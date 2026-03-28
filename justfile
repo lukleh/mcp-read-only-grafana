@@ -1,6 +1,4 @@
 # MCP Read-Only Grafana Server
-set dotenv-load
-
 # Show available commands
 default:
     @just --list
@@ -10,12 +8,16 @@ install:
     uv sync
 
 # Run the server
-run config="connections.yaml":
-    @uv run -- python -m src.server {{config}}
+run:
+    @uv run -- python -m src.server
 
 # Validate configuration file
-validate config="connections.yaml":
-    uv run -- python -m src.tools.validate_config {{config}}
+validate:
+    uv run -- python -m src.tools.validate_config
+
+# Show resolved paths
+print-paths:
+    uv run -- python -m src.server --print-paths
 
 # Test Grafana connection(s)
 test-connection connection="":
