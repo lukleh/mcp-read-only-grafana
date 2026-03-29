@@ -1,5 +1,5 @@
-from src.config import ConfigParser
-from src.runtime_paths import resolve_runtime_paths
+from mcp_read_only_grafana.config import ConfigParser
+from mcp_read_only_grafana.runtime_paths import resolve_runtime_paths
 
 
 def test_resolve_runtime_paths_env_overrides(monkeypatch, tmp_path):
@@ -17,6 +17,7 @@ def test_resolve_runtime_paths_env_overrides(monkeypatch, tmp_path):
     assert runtime_paths.state_dir == state_dir
     assert runtime_paths.cache_dir == cache_dir
     assert runtime_paths.connections_file == config_dir / "connections.yaml"
+    assert runtime_paths.schema_file == config_dir / "connections.schema.json"
     assert runtime_paths.state_file == state_dir / "session_tokens.json"
 
 
@@ -27,8 +28,7 @@ def test_config_parser_reads_runtime_env_and_state_files(tmp_path):
     state_dir.mkdir()
 
     (config_dir / "connections.yaml").write_text(
-        "- connection_name: test_grafana\n"
-        "  url: https://grafana.example.com\n",
+        "- connection_name: test_grafana\n" "  url: https://grafana.example.com\n",
         encoding="utf-8",
     )
     (state_dir / "session_tokens.json").write_text(
@@ -65,8 +65,7 @@ def test_state_file_overrides_runtime_environment_for_session_token(tmp_path):
     state_dir.mkdir()
 
     (config_dir / "connections.yaml").write_text(
-        "- connection_name: test_grafana\n"
-        "  url: https://grafana.example.com\n",
+        "- connection_name: test_grafana\n" "  url: https://grafana.example.com\n",
         encoding="utf-8",
     )
     (state_dir / "session_tokens.json").write_text(

@@ -82,9 +82,7 @@ def register_alert_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
-    async def get_ruler_namespace_rules(
-        connection_name: str, namespace: str
-    ) -> str:
+    async def get_ruler_namespace_rules(connection_name: str, namespace: str) -> str:
         """
         Get all rule groups for a specific namespace (folder).
 

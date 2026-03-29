@@ -4,16 +4,33 @@ version = "0.1.0"
 description = "MCP server for read-only access to Grafana instances"
 readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["grafana", "mcp", "mcp-server", "read-only", "observability"]
 authors = [
     {name = "Lukas Lehner", email = "lehner.lukas@gmail.com"}
 ]
 license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 dependencies = [
     "mcp>=1.0.0",
     "pyyaml>=6.0",
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/lukleh/mcp-read-only-grafana"
+Repository = "https://github.com/lukleh/mcp-read-only-grafana"
+Issues = "https://github.com/lukleh/mcp-read-only-grafana/issues"
+Changelog = "https://github.com/lukleh/mcp-read-only-grafana/releases"
 
 [project.optional-dependencies]
 dev = [
@@ -29,19 +46,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-mcp-read-only-grafana = "src.server:main"
+mcp-read-only-grafana = "mcp_read_only_grafana.server:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
-
-[dependency-groups]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-timeout>=2.2.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
-]
+packages = ["src/mcp_read_only_grafana"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

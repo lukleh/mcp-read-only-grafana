@@ -3,7 +3,7 @@
 import pytest
 import tempfile
 from pathlib import Path
-from src.config import ConfigParser, GrafanaConnection
+from mcp_read_only_grafana.config import ConfigParser, GrafanaConnection
 
 
 def test_connection_name_validation():
@@ -42,9 +42,8 @@ def test_env_var_name_generation():
             url="https://example.com",
         )
         assert conn.get_env_var_name() == expected_env_var
-        assert (
-            conn.get_api_key_env_var_name()
-            == expected_env_var.replace("SESSION", "API_KEY")
+        assert conn.get_api_key_env_var_name() == expected_env_var.replace(
+            "SESSION", "API_KEY"
         )
 
 

@@ -1,8 +1,8 @@
 """Tests for cookie refresh logic"""
 
 import httpx
-from src.grafana_connector import GrafanaConnector
-from src.config import GrafanaConnection
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
+from mcp_read_only_grafana.config import GrafanaConnection
 
 
 def test_parse_set_cookie_header():

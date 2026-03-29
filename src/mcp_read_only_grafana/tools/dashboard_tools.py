@@ -188,9 +188,7 @@ def register_dashboard_tools(
         return json.dumps(dashboards, indent=2)
 
     @mcp.tool()
-    async def get_dashboard_versions(
-        connection_name: str, dashboard_uid: str
-    ) -> str:
+    async def get_dashboard_versions(connection_name: str, dashboard_uid: str) -> str:
         """
         Get version history of a dashboard.
 

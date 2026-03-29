@@ -8,6 +8,7 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 > - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
 > - Credentials: injected via the MCP client or shell environment
 > - Rotated session state: `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`
+> - Cache: `~/.cache/lukleh/mcp-read-only-grafana/`
 
 **Compatibility:** Targeted and tested against Grafana 9.5.x. Newer versions (e.g., 10.x) should work for read-only endpoints but may expose extra fields not covered here.
 
@@ -24,32 +25,36 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 ## Prerequisites
 
-This project requires:
-- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
-- [just](https://github.com/casey/just) - Command runner (optional, but recommended for development)
+- Python 3.11 or higher
+- [uv](https://github.com/astral-sh/uv)
+- Grafana credentials for at least one instance
+- an MCP client such as Claude Code or Codex
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install the Server
 
 ```bash
-uv sync
+# Run the published package without cloning the repository
+uvx mcp-read-only-grafana --write-sample-config
+
+# Or install it once and reuse the command directly
+uv tool install mcp-read-only-grafana
+mcp-read-only-grafana --write-sample-config
 ```
 
-### 2. Configure Grafana Connections
+The command above writes a starter config and matching schema to:
 
-Create the config and state directories:
+- `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+- `~/.config/lukleh/mcp-read-only-grafana/connections.schema.json`
+
+### 2. Confirm Runtime Paths
 
 ```bash
-mkdir -p ~/.config/lukleh/mcp-read-only-grafana
-mkdir -p ~/.local/state/lukleh/mcp-read-only-grafana
+uvx mcp-read-only-grafana --print-paths
 ```
 
-Copy the sample configuration file:
-
-```bash
-cp connections.yaml.sample ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
-```
+### 3. Edit the Connections File
 
 Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana instances:
 
@@ -57,86 +62,123 @@ Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana
 - connection_name: production_grafana
   url: https://grafana.example.com
   description: Production Grafana instance
+
+- connection_name: staging_grafana
+  url: https://staging-grafana.example.com
+  description: Staging Grafana instance
 ```
 
-### 3. Set Up Authentication
+### 4. Set Up Authentication
 
-Set credentials in the environment used to launch the server (for example,
-export them in your shell for local testing or inject them via your MCP client
-config).
+Set credentials in the environment used to launch the server. For local shell
+testing you can export them directly; for normal MCP use, inject them through
+the client config.
 
-You can authenticate **either** with a session cookie (auto-rotated) **or** with a Grafana API key (Bearer token):
+You can authenticate with either a session cookie or a Grafana API key:
 
-- Session cookie (default, supports automatic rotation & persistence):
+- Session cookie:
+
   ```bash
   export GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
   ```
-- API key (no rotation; useful for service accounts or Grafana Cloud tokens):
+
+- API key:
+
   ```bash
   export GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
   ```
 
-If both are set, the server will prefer the API key.
+If both are set for the same connection, the server prefers the API key.
 
-#### How to Get Your Grafana Session Token:
+#### How to Get Your Grafana Session Token
 
-1. Login to your Grafana instance in a web browser
-2. Open Developer Tools
-3. Go to Application/Storage → Cookies
+1. Log in to Grafana in a web browser
+2. Open developer tools
+3. Go to Application/Storage -> Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
 5. Copy the value and export or inject it as `GRAFANA_SESSION_<CONNECTION_NAME>`
 
-#### How to Get a Grafana API Key:
+#### How to Get a Grafana API Key
 
-1. In Grafana, go to **Administration → Service Accounts** (or **Configuration → API Keys** on older versions)
-2. Create a key with the minimum required read permissions
-3. Copy the generated token (starts with `glsa_` or similar) and export or inject it as `GRAFANA_API_KEY_<CONNECTION_NAME>`
+1. In Grafana, go to **Administration -> Service Accounts** or **Configuration -> API Keys**
+2. Create a key with the minimum required permissions
+3. Export or inject it as `GRAFANA_API_KEY_<CONNECTION_NAME>`
 
-If you start with a session cookie, the server will keep refreshed cookies in `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`. On later requests, that persisted state file takes precedence over the live `GRAFANA_SESSION_*` environment value; clear or update the state file if you need to force a replacement token.
+If you start with a session cookie, the server will keep refreshed cookies in
+`~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`. On later
+requests, that persisted state file takes precedence over the live
+`GRAFANA_SESSION_*` environment value until you update or remove it.
 
-### 4. Validate and Test Connections
+### 5. Configure Your MCP Client
 
-```bash
-# Validate configuration file
-just validate
-
-# Show the exact paths in use
-just print-paths
-
-# Test Grafana connectivity
-just test-connection              # Test all connections
-just test-connection production_grafana  # Test specific connection
-```
-
-### 5. Run the Server
-
-Run the server manually to test:
+**Claude Code**
 
 ```bash
-just run
-
-# Enable admin mode for write operations (alert management)
-uv run -- python -m src.server --allow-admin
-
-# Point the server at a different config directory
-uv run -- python -m src.server --config-dir /path/to/config-dir
+claude mcp add mcp-read-only-grafana \
+  --scope user \
+  -e GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here \
+  -- uvx mcp-read-only-grafana
 ```
 
-### 6. Add MCP to Your AI Assistant
+**Codex**
 
-For **Claude Code**:
 ```bash
-claude mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
+codex mcp add mcp-read-only-grafana \
+  --env GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here \
+  -- uvx mcp-read-only-grafana
 ```
 
-For **Codex**:
+You can swap `GRAFANA_SESSION_*` for `GRAFANA_API_KEY_*` in the MCP client
+config if you prefer API-key authentication.
+
+If you intentionally want the admin-only endpoints, append `--allow-admin` to
+the launched command:
+
 ```bash
-codex mcp add mcp-read-only-grafana -- uv --directory {PATH_TO_MCP_READ_ONLY_GRAFANA} run python -m src.server
+uvx mcp-read-only-grafana --allow-admin
 ```
 
-Replace `{PATH_TO_MCP_READ_ONLY_GRAFANA}` with the absolute path to where you cloned this repository (e.g., `/Users/yourname/projects/mcp-read-only-grafana`).
-Also configure matching `GRAFANA_SESSION_*` or `GRAFANA_API_KEY_*`
-environment variables in the same MCP entry.
+### 6. Restart and Test
+
+Restart your MCP client and try a simple query such as:
+
+```text
+List all dashboards in the production Grafana instance.
+```
+
+## Command Line Testing
+
+```bash
+# Show the resolved runtime paths
+uvx mcp-read-only-grafana --print-paths
+
+# Write or refresh the default connections.yaml
+uvx mcp-read-only-grafana --write-sample-config
+uvx mcp-read-only-grafana --write-sample-config --overwrite
+
+# Run the server with the default home-directory config
+uvx mcp-read-only-grafana
+
+# Enable admin-only endpoints
+uvx mcp-read-only-grafana --allow-admin
+
+# Point the server at a different config root
+uvx mcp-read-only-grafana --config-dir /path/to/config-dir
+```
+
+## Local Development
+
+If you want to work on the repository itself:
+
+```bash
+git clone https://github.com/lukleh/mcp-read-only-grafana.git
+cd mcp-read-only-grafana
+uv sync --extra dev
+uv run pytest -q
+uv run mcp-read-only-grafana --print-paths
+```
+
+The checked-in sample file remains available at [connections.yaml.sample](connections.yaml.sample) for documentation and review, but package users should prefer `--write-sample-config`.
 
 ## Available MCP Tools
 
@@ -671,8 +713,8 @@ uv run pytest
 just format
 just lint
 # or
-uv run black src/
-uv run ruff check src/
+uv run black src/mcp_read_only_grafana/
+uv run ruff check src/mcp_read_only_grafana/ tests/
 ```
 
 ## License

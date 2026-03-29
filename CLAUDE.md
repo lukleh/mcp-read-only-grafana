@@ -10,26 +10,27 @@ MCP Read-Only Grafana Server provides read-only access to Grafana instances via 
 
 ```bash
 # Install dependencies
-uv sync
+uv sync --extra dev
 
 # Run the server manually for testing
-uv run python -m src.server
+uv run mcp-read-only-grafana
 
-# Run with custom config file
-uv run python -m src.server /path/to/connections.yaml
+# Show the resolved runtime paths
+uv run mcp-read-only-grafana --print-paths
 
 # Run with admin endpoints enabled (requires Grafana admin permissions)
-uv run python -m src.server --allow-admin
+uv run mcp-read-only-grafana --allow-admin
 
-# Run with both custom config and admin endpoints
-uv run python -m src.server /path/to/connections.yaml --allow-admin
+# Write or refresh the default sample config
+uv run mcp-read-only-grafana --write-sample-config
+uv run mcp-read-only-grafana --write-sample-config --overwrite
 
 # Code formatting
-uv run black src/
-uv run ruff check src/
+uv run black src/mcp_read_only_grafana/
+uv run ruff check src/mcp_read_only_grafana/ tests/
 
 # Run tests
-uv run pytest
+uv run pytest -q
 
 # Run ALL integration tests (requires Grafana credentials)
 uv run pytest tests/test_integration_all_endpoints.py -v -m integration
@@ -69,36 +70,38 @@ Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 
 ### Core Components
 
-**src/server.py** - MCP server entry point (~150 lines)
+**src/mcp_read_only_grafana/server.py** - MCP server entry point
 - `ReadOnlyGrafanaServer` class manages connections and orchestrates tool registration
-- Calls domain-specific registration functions from `src/tools/`
+- Calls domain-specific registration functions from `src/mcp_read_only_grafana/tools/`
+- Handles package bootstrap flags such as `--write-sample-config`, `--overwrite`, and `--print-paths`
 - Error handling: Let exceptions propagate naturally - the MCP framework handles them
 
-**src/config.py** - Configuration management
+**src/mcp_read_only_grafana/config.py** - Configuration management
 - `GrafanaConnection` (Pydantic model): Validates connection settings
 - `ConfigParser`: Loads connections from YAML and environment variables
 - Session token pattern: `GRAFANA_SESSION_<CONNECTION_NAME>` (uppercase, hyphens→underscores)
 - **Dynamic token reloading**: `reload_session_token()` reloads the runtime environment and persisted session cache on every call
 
-**src/grafana_connector.py** - Grafana API client
+**src/mcp_read_only_grafana/runtime_paths.py** - Runtime path resolution
+- Resolves config, state, and cache directories from CLI flags, environment variables, or defaults
+- Owns the package runtime layout used by both `uvx` and local development
+
+**src/mcp_read_only_grafana/grafana_connector.py** - Grafana API client
 - `GrafanaConnector` wraps httpx for Grafana API calls
 - **Critical**: `_get()` calls `connection.reload_session_token()` before EVERY request
 - This reloads the configured credential sources without restarting the server
 - All API methods return formatted dictionaries/lists, not raw responses
 
-**src/exceptions.py** - Custom exception hierarchy
+**src/mcp_read_only_grafana/exceptions.py** - Custom exception hierarchy
 - `GrafanaError` (base), `ConnectionNotFoundError`, `AuthenticationError`
 - `PermissionDeniedError`, `GrafanaAPIError`, `GrafanaTimeoutError`
 
-**src/types.py** - TypedDict definitions for Grafana responses
-- `DashboardFull`, `PanelInfo`, `AlertRuleInfo`, `DatasourceInfo`, etc.
-
-**src/validation.py** - Validation utilities
+**src/mcp_read_only_grafana/validation.py** - Validation utilities
 - `get_connector()`: Centralizes connection validation (replaces 55 repeated checks)
 
 ### Tool Organization
 
-Tools are organized into domain-specific modules under `src/tools/`:
+Tools are organized into domain-specific modules under `src/mcp_read_only_grafana/tools/`:
 
 | Module | Tools | Description |
 |--------|-------|-------------|
@@ -120,7 +123,7 @@ Each module exports a `register_*_tools(mcp, connectors)` function.
 
 ### Error Handling Pattern
 
-Custom exceptions in `src/exceptions.py` provide clear, typed errors:
+Custom exceptions in `src/mcp_read_only_grafana/exceptions.py` provide clear, typed errors:
 - `ConnectionNotFoundError`: Invalid connection name (shows available options)
 - `AuthenticationError`: HTTP 401, expired session
 - `PermissionDeniedError`: HTTP 403, insufficient permissions

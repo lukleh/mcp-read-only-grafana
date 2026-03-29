@@ -87,9 +87,7 @@ def register_user_tools(
             JSON string with list of users.
         """
         connector = get_connector(connectors, connection_name)
-        users = await connector.list_users(
-            page=page, per_page=per_page, fields=fields
-        )
+        users = await connector.list_users(page=page, per_page=per_page, fields=fields)
         return json.dumps(users, indent=2)
 
     @mcp.tool()
@@ -112,9 +110,7 @@ def register_user_tools(
             JSON string with list of teams.
         """
         connector = get_connector(connectors, connection_name)
-        teams = await connector.list_teams(
-            page=page, per_page=per_page, fields=fields
-        )
+        teams = await connector.list_teams(page=page, per_page=per_page, fields=fields)
         return json.dumps(teams, indent=2)
 
     @mcp.tool()

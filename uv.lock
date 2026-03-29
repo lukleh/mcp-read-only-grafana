@@ -226,15 +226,6 @@ dev = [
     { name = "ruff" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-timeout" },
-    { name = "ruff" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
@@ -248,15 +239,6 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
 ]
 provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=23.0.0" },
-    { name = "pytest", specifier = ">=7.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.21.0" },
-    { name = "pytest-timeout", specifier = ">=2.2.0" },
-    { name = "ruff", specifier = ">=0.1.0" },
-]
 
 [[package]]
 name = "mypy-extensions"

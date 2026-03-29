@@ -21,8 +21,9 @@ See CLAUDE.md for detailed test configuration and admin test documentation.
 import functools
 import os
 import pytest
-from src.config import ConfigParser
-from src.grafana_connector import GrafanaConnector
+from mcp_read_only_grafana.config import ConfigParser
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
+
 RUN_ADMIN_TESTS = os.getenv("RUN_ADMIN_TESTS", "").lower() in {"1", "true", "yes", "on"}
 admin_only = pytest.mark.skipif(
     not RUN_ADMIN_TESTS,
@@ -123,7 +124,9 @@ class TestHealthAndBasicInfo:
 
         assert isinstance(result, dict), "Expected user object"
         assert "login" in result, "User payload should include login"
-        print(f"\n✓ Current user: {result.get('login')} ({result.get('role', 'unknown')})")
+        print(
+            f"\n✓ Current user: {result.get('login')} ({result.get('role', 'unknown')})"
+        )
 
 
 @pytest.mark.integration
@@ -459,7 +462,9 @@ class TestAlertingRulerAPI:
         namespace = next(iter(all_rules.keys()))
         result = await grafana_connector.get_ruler_namespace_rules(namespace)
 
-        assert isinstance(result, dict), "Expected dict mapping namespace to rule groups"
+        assert isinstance(
+            result, dict
+        ), "Expected dict mapping namespace to rule groups"
         # The response should contain the same namespace as the key
         assert namespace in result, f"Expected namespace '{namespace}' in result"
         rule_groups = result[namespace]

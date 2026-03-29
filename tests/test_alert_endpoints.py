@@ -3,9 +3,9 @@
 import httpx
 import pytest
 
-from src.config import GrafanaConnection
-from src.grafana_connector import GrafanaConnector
-from src.exceptions import GrafanaAPIError, PermissionDeniedError
+from mcp_read_only_grafana.config import GrafanaConnection
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
+from mcp_read_only_grafana.exceptions import GrafanaAPIError, PermissionDeniedError
 
 
 def create_mock_connector(connection, handler):
@@ -98,14 +98,23 @@ async def test_list_alerts_filters_by_folder_uid_or_title(session_connection):
                         {
                             "name": "ops-group",
                             "interval": "1m",
-                            "rules": [{"grafana_alert": {"uid": "ops-1", "title": "Ops"}}],
+                            "rules": [
+                                {"grafana_alert": {"uid": "ops-1", "title": "Ops"}}
+                            ],
                         }
                     ],
                     "ops-staging": [
                         {
                             "name": "staging-group",
                             "interval": "1m",
-                            "rules": [{"grafana_alert": {"uid": "staging-1", "title": "Staging"}}],
+                            "rules": [
+                                {
+                                    "grafana_alert": {
+                                        "uid": "staging-1",
+                                        "title": "Staging",
+                                    }
+                                }
+                            ],
                         }
                     ],
                 },
@@ -134,14 +143,18 @@ async def test_list_alerts_falls_back_when_folder_lookup_is_missing(session_conn
                         {
                             "name": "ops-group",
                             "interval": "1m",
-                            "rules": [{"grafana_alert": {"uid": "ops-1", "title": "Ops"}}],
+                            "rules": [
+                                {"grafana_alert": {"uid": "ops-1", "title": "Ops"}}
+                            ],
                         }
                     ],
                     "other-folder": [
                         {
                             "name": "other-group",
                             "interval": "1m",
-                            "rules": [{"grafana_alert": {"uid": "other-1", "title": "Other"}}],
+                            "rules": [
+                                {"grafana_alert": {"uid": "other-1", "title": "Other"}}
+                            ],
                         }
                     ],
                 },

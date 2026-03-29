@@ -5,8 +5,8 @@ import json
 import httpx
 import pytest
 
-from src.config import GrafanaConnection
-from src.grafana_connector import GrafanaConnector
+from mcp_read_only_grafana.config import GrafanaConnection
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 
 
 @pytest.mark.asyncio
