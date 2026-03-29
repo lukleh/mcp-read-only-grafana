@@ -5,6 +5,12 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
 Current package status:
 - Published to PyPI as `0.1.0`
 
+## CLI convention
+
+- The public interface starts with the package command: `mcp-read-only-grafana`.
+- Repository-facing docs should prefer the root command plus flags, not extra top-level helper scripts.
+- If this repo ever needs auxiliary operations beyond flags, add them as subcommands under `mcp-read-only-grafana ...` rather than introducing new public console entry points.
+
 ## One-time PyPI setup
 
 1. In PyPI, add a trusted publisher for this repository.
