@@ -51,7 +51,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Validate MCP Grafana Server configuration"
+        prog="mcp-read-only-grafana validate-config",
+        description="Validate MCP Grafana Server configuration",
     )
     parser.add_argument(
         "--config-dir",

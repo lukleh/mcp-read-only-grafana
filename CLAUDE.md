@@ -25,6 +25,13 @@ uv run mcp-read-only-grafana --allow-admin
 uv run mcp-read-only-grafana --write-sample-config
 uv run mcp-read-only-grafana --write-sample-config --overwrite
 
+# Validate configuration through the public root CLI
+uv run mcp-read-only-grafana validate-config
+
+# Test all configured connections or one named connection
+uv run mcp-read-only-grafana test-connection
+uv run mcp-read-only-grafana test-connection production_grafana
+
 # Code formatting
 uv run black src/mcp_read_only_grafana/
 uv run ruff check src/mcp_read_only_grafana/ tests/
@@ -74,6 +81,7 @@ Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 - `ReadOnlyGrafanaServer` class manages connections and orchestrates tool registration
 - Calls domain-specific registration functions from `src/mcp_read_only_grafana/tools/`
 - Handles package bootstrap flags such as `--write-sample-config`, `--overwrite`, and `--print-paths`
+- Dispatches root CLI management subcommands such as `validate-config` and `test-connection`
 - Error handling: Let exceptions propagate naturally - the MCP framework handles them
 
 **src/mcp_read_only_grafana/config.py** - Configuration management

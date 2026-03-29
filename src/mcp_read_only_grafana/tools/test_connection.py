@@ -107,7 +107,10 @@ def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Test MCP Grafana Server connections")
+    parser = argparse.ArgumentParser(
+        prog="mcp-read-only-grafana test-connection",
+        description="Test MCP Grafana Server connections",
+    )
     parser.add_argument(
         "connection",
         nargs="?",

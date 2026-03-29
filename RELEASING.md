@@ -4,12 +4,23 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
 
 Current package status:
 - Published to PyPI as `0.1.0`
+- Next planned release from current branch: `0.1.1`
+
+## Changelog policy
+
+- Keep upcoming user-visible changes under `## [Unreleased]` in `CHANGELOG.md`.
+- On release, move those entries into a dated version section such as `## [0.1.1] - 2026-03-29`.
+- Prefer concise bullets grouped under `Added`, `Changed`, and `Fixed`.
+- When creating GitHub release notes, reuse the matching `CHANGELOG.md` section instead of writing a second summary from scratch.
 
 ## CLI convention
 
 - The public interface starts with the package command: `mcp-read-only-grafana`.
 - Repository-facing docs should prefer the root command plus flags, not extra top-level helper scripts.
-- If this repo ever needs auxiliary operations beyond flags, add them as subcommands under `mcp-read-only-grafana ...` rather than introducing new public console entry points.
+- This repo uses root subcommands for auxiliary operations:
+  - `mcp-read-only-grafana validate-config`
+  - `mcp-read-only-grafana test-connection`
+- Future auxiliary operations should follow that same pattern rather than introducing new public console entry points.
 
 ## One-time PyPI setup
 
@@ -30,23 +41,24 @@ Current repository setup:
 
 ## Release steps
 
-1. Update `version` in `pyproject.toml`.
-2. Commit the release changes to `main`.
-3. Create and push a matching version tag:
+1. Update `CHANGELOG.md` for the release.
+2. Update `version` in `pyproject.toml`.
+3. Commit the release changes to `main`.
+4. Create and push a matching version tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-4. GitHub Actions will start the `Publish` workflow.
-5. The workflow will:
+5. GitHub Actions will start the `Publish` workflow.
+6. The workflow will:
    - run tests
    - build the wheel and sdist
    - smoke test both artifacts with `uvx`
-6. Once those checks pass, the workflow will pause at the `pypi` environment for approval.
-7. Approve the deployment in the GitHub Actions UI.
-8. After approval, GitHub Actions will publish to PyPI.
+7. Once those checks pass, the workflow will pause at the `pypi` environment for approval.
+8. Approve the deployment in the GitHub Actions UI.
+9. After approval, GitHub Actions will publish to PyPI.
 
 ## Prereleases
 
@@ -67,5 +79,5 @@ The same `Publish` workflow and manual approval gate should handle the prereleas
 ## Notes
 
 - The publish workflow validates that the Git tag matches `pyproject.toml`.
-- The smoke tests exercise the packaged CLI by writing a sample config plus schema and printing runtime paths from the built artifacts.
+- The smoke tests exercise the packaged CLI by writing a sample config plus schema, printing runtime paths, and running the root subcommands from the built artifacts.
 - Because `prevent_self_review` is currently disabled, `lukleh` can approve their own release.

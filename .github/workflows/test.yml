@@ -103,6 +103,18 @@ jobs:
           --cache-dir "$tmp_dir/cache" \
           --allow-admin \
           --print-paths
+        uvx --from dist/*.whl mcp-read-only-grafana \
+          --config-dir "$tmp_dir/config" \
+          --state-dir "$tmp_dir/state" \
+          --cache-dir "$tmp_dir/cache" \
+          validate-config \
+          --print-paths
+        uvx --from dist/*.whl mcp-read-only-grafana \
+          --config-dir "$tmp_dir/config" \
+          --state-dir "$tmp_dir/state" \
+          --cache-dir "$tmp_dir/cache" \
+          test-connection \
+          --print-paths
 
     - name: Smoke test sdist
       run: |
@@ -125,4 +137,16 @@ jobs:
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
           --allow-admin \
+          --print-paths
+        uvx --from dist/*.tar.gz mcp-read-only-grafana \
+          --config-dir "$tmp_dir/config" \
+          --state-dir "$tmp_dir/state" \
+          --cache-dir "$tmp_dir/cache" \
+          validate-config \
+          --print-paths
+        uvx --from dist/*.tar.gz mcp-read-only-grafana \
+          --config-dir "$tmp_dir/config" \
+          --state-dir "$tmp_dir/state" \
+          --cache-dir "$tmp_dir/cache" \
+          test-connection \
           --print-paths

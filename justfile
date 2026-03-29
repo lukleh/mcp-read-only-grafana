@@ -17,7 +17,7 @@ run-admin:
 
 # Validate configuration file
 validate:
-    uv run python -m mcp_read_only_grafana.tools.validate_config
+    uv run mcp-read-only-grafana validate-config
 
 # Show resolved paths
 print-paths:
@@ -31,9 +31,9 @@ write-sample-config:
 test-connection connection="":
     #!/usr/bin/env bash
     if [ -z "{{connection}}" ]; then
-        uv run python -m mcp_read_only_grafana.tools.test_connection
+        uv run mcp-read-only-grafana test-connection
     else
-        uv run python -m mcp_read_only_grafana.tools.test_connection {{connection}}
+        uv run mcp-read-only-grafana test-connection {{connection}}
     fi
 
 # Run linter
