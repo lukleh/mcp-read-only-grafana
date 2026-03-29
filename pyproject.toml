@@ -30,7 +30,7 @@ dependencies = [
 Homepage = "https://github.com/lukleh/mcp-read-only-grafana"
 Repository = "https://github.com/lukleh/mcp-read-only-grafana"
 Issues = "https://github.com/lukleh/mcp-read-only-grafana/issues"
-Changelog = "https://github.com/lukleh/mcp-read-only-grafana/releases"
+Changelog = "https://github.com/lukleh/mcp-read-only-grafana/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
