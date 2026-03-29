@@ -83,12 +83,14 @@ jobs:
     - name: Smoke test wheel
       run: |
         tmp_dir="$(mktemp -d)"
+        trap 'rm -rf "$tmp_dir"' EXIT
         uvx --from dist/*.whl mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
           --write-sample-config
         test -f "$tmp_dir/config/connections.yaml"
+        test -f "$tmp_dir/config/connections.schema.json"
         uvx --from dist/*.whl mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \
@@ -104,12 +106,14 @@ jobs:
     - name: Smoke test sdist
       run: |
         tmp_dir="$(mktemp -d)"
+        trap 'rm -rf "$tmp_dir"' EXIT
         uvx --from dist/*.tar.gz mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
           --write-sample-config
         test -f "$tmp_dir/config/connections.yaml"
+        test -f "$tmp_dir/config/connections.schema.json"
         uvx --from dist/*.tar.gz mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \

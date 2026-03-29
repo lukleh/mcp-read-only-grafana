@@ -17,6 +17,7 @@ def test_write_sample_config_creates_runtime_dirs_and_file(tmp_path, monkeypatch
     """Sample config bootstrap should create package runtime directories."""
     from mcp_read_only_grafana.runtime_paths import resolve_runtime_paths
     from mcp_read_only_grafana.server import (
+        SAMPLE_CONNECTIONS_SCHEMA_JSON,
         SAMPLE_CONNECTIONS_YAML,
         write_sample_config,
     )
@@ -36,6 +37,10 @@ def test_write_sample_config_creates_runtime_dirs_and_file(tmp_path, monkeypatch
     assert runtime_paths.state_dir.is_dir()
     assert runtime_paths.cache_dir.is_dir()
     assert written_path.read_text(encoding="utf-8") == SAMPLE_CONNECTIONS_YAML
+    assert (
+        runtime_paths.schema_file.read_text(encoding="utf-8")
+        == SAMPLE_CONNECTIONS_SCHEMA_JSON
+    )
 
 
 def test_sample_config_matches_example_file():
@@ -45,6 +50,15 @@ def test_sample_config_matches_example_file():
     example_path = Path(__file__).resolve().parents[1] / "connections.yaml.sample"
 
     assert SAMPLE_CONNECTIONS_YAML == example_path.read_text(encoding="utf-8")
+
+
+def test_embedded_schema_matches_example_file():
+    """The packaged schema should stay in sync with the checked-in schema file."""
+    from mcp_read_only_grafana.server import SAMPLE_CONNECTIONS_SCHEMA_JSON
+
+    example_path = Path(__file__).resolve().parents[1] / "connections.schema.json"
+
+    assert SAMPLE_CONNECTIONS_SCHEMA_JSON == example_path.read_text(encoding="utf-8")
 
 
 def test_write_sample_config_requires_overwrite_to_replace(tmp_path):
@@ -70,6 +84,7 @@ def test_write_sample_config_overwrite_replaces_existing_file(tmp_path):
     """Overwrite mode should replace an existing file with the sample config."""
     from mcp_read_only_grafana.runtime_paths import RuntimePaths
     from mcp_read_only_grafana.server import (
+        SAMPLE_CONNECTIONS_SCHEMA_JSON,
         SAMPLE_CONNECTIONS_YAML,
         write_sample_config,
     )
@@ -89,6 +104,10 @@ def test_write_sample_config_overwrite_replaces_existing_file(tmp_path):
     assert (
         runtime_paths.connections_file.read_text(encoding="utf-8")
         == SAMPLE_CONNECTIONS_YAML
+    )
+    assert (
+        runtime_paths.schema_file.read_text(encoding="utf-8")
+        == SAMPLE_CONNECTIONS_SCHEMA_JSON
     )
 
 
@@ -136,6 +155,7 @@ def test_main_write_sample_config_and_print_paths_together(
     assert f"state_dir={state_dir}" in output
     assert f"cache_dir={cache_dir}" in output
     assert f"connections_file={config_dir / 'connections.yaml'}" in output
+    assert f"schema_file={config_dir / 'connections.schema.json'}" in output
 
 
 def test_main_rejects_overwrite_without_write_sample_config(monkeypatch):

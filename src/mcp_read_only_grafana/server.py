@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import logging
 import sys
+from importlib.resources import files
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict
@@ -28,6 +29,11 @@ from .tools import (
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+SAMPLE_CONNECTIONS_SCHEMA_JSON = (
+    files("mcp_read_only_grafana")
+    .joinpath("connections.schema.json")
+    .read_text(encoding="utf-8")
+)
 SAMPLE_CONNECTIONS_YAML = dedent(
     """
     # yaml-language-server: $schema=./connections.schema.json
@@ -158,6 +164,10 @@ def write_sample_config(
         )
 
     config_path.write_text(SAMPLE_CONNECTIONS_YAML, encoding="utf-8")
+    runtime_paths.schema_file.write_text(
+        SAMPLE_CONNECTIONS_SCHEMA_JSON,
+        encoding="utf-8",
+    )
     return config_path
 
 

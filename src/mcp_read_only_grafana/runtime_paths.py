@@ -21,6 +21,10 @@ class RuntimePaths:
         return self.config_dir / "connections.yaml"
 
     @property
+    def schema_file(self) -> Path:
+        return self.config_dir / "connections.schema.json"
+
+    @property
     def state_file(self) -> Path:
         return self.state_dir / "session_tokens.json"
 
@@ -31,6 +35,7 @@ class RuntimePaths:
                 f"state_dir={self.state_dir}",
                 f"cache_dir={self.cache_dir}",
                 f"connections_file={self.connections_file}",
+                f"schema_file={self.schema_file}",
                 f"state_file={self.state_file}",
             ]
         )

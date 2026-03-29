@@ -43,7 +43,10 @@ uv tool install mcp-read-only-grafana
 mcp-read-only-grafana --write-sample-config
 ```
 
-The command above writes a starter config to `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`.
+The command above writes a starter config and matching schema to:
+
+- `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+- `~/.config/lukleh/mcp-read-only-grafana/connections.schema.json`
 
 ### 2. Confirm Runtime Paths
 

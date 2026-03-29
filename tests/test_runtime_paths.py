@@ -17,6 +17,7 @@ def test_resolve_runtime_paths_env_overrides(monkeypatch, tmp_path):
     assert runtime_paths.state_dir == state_dir
     assert runtime_paths.cache_dir == cache_dir
     assert runtime_paths.connections_file == config_dir / "connections.yaml"
+    assert runtime_paths.schema_file == config_dir / "connections.schema.json"
     assert runtime_paths.state_file == state_dir / "session_tokens.json"
 
 

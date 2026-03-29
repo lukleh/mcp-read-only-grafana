@@ -34,13 +34,14 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-4. GitHub Actions will start the `Publish` workflow and, once the `pypi` environment exists, pause there for approval.
-5. Approve the deployment in the GitHub Actions UI.
-6. After approval, GitHub Actions should:
+4. GitHub Actions will start the `Publish` workflow.
+5. The workflow will:
    - run tests
    - build the wheel and sdist
    - smoke test both artifacts with `uvx`
-   - publish to PyPI
+6. Once those checks pass, the workflow will pause at the `pypi` environment for approval.
+7. Approve the deployment in the GitHub Actions UI.
+8. After approval, GitHub Actions will publish to PyPI.
 
 ## Prereleases
 
@@ -61,5 +62,5 @@ The same `Publish` workflow and manual approval gate should handle the prereleas
 ## Notes
 
 - The publish workflow validates that the Git tag matches `pyproject.toml`.
-- The smoke tests exercise the packaged CLI by writing a sample config and printing runtime paths from the built artifacts.
+- The smoke tests exercise the packaged CLI by writing a sample config plus schema and printing runtime paths from the built artifacts.
 - Document both read-only mode and `--allow-admin` mode in the public package docs before the first release.
