@@ -3,14 +3,14 @@
 import httpx
 import pytest
 
-from src.config import GrafanaConnection
-from src.exceptions import (
+from mcp_read_only_grafana.config import GrafanaConnection
+from mcp_read_only_grafana.exceptions import (
     AuthenticationError,
     GrafanaAPIError,
     GrafanaTimeoutError,
     PermissionDeniedError,
 )
-from src.grafana_connector import GrafanaConnector
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 
 
 @pytest.fixture
@@ -40,12 +40,16 @@ def create_mock_connector(connection, handler):
     connector = GrafanaConnector(connection)
     connector.client = httpx.AsyncClient(
         base_url=str(connection.url),
-        headers={"Authorization": f"Bearer {connection.api_key}"}
-        if connection.api_key
-        else None,
-        cookies={"grafana_session": connection.session_token}
-        if connection.session_token
-        else None,
+        headers=(
+            {"Authorization": f"Bearer {connection.api_key}"}
+            if connection.api_key
+            else None
+        ),
+        cookies=(
+            {"grafana_session": connection.session_token}
+            if connection.session_token
+            else None
+        ),
         timeout=connection.timeout,
         verify=connection.verify_ssl,
         follow_redirects=True,
@@ -308,7 +312,9 @@ async def test_handle_http_error_401(session_connection):
 
     mock_response = httpx.Response(401, text="Unauthorized")
     error = httpx.HTTPStatusError(
-        "401 Unauthorized", request=httpx.Request("GET", "http://test"), response=mock_response
+        "401 Unauthorized",
+        request=httpx.Request("GET", "http://test"),
+        response=mock_response,
     )
 
     with pytest.raises(AuthenticationError):
@@ -324,7 +330,9 @@ async def test_handle_http_error_403(session_connection):
 
     mock_response = httpx.Response(403, text="Forbidden")
     error = httpx.HTTPStatusError(
-        "403 Forbidden", request=httpx.Request("GET", "http://test"), response=mock_response
+        "403 Forbidden",
+        request=httpx.Request("GET", "http://test"),
+        response=mock_response,
     )
 
     with pytest.raises(PermissionDeniedError) as exc_info:

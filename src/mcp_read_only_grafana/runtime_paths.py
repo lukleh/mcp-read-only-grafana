@@ -35,6 +35,10 @@ class RuntimePaths:
             ]
         )
 
+    def ensure_directories(self) -> None:
+        for path in (self.config_dir, self.state_dir, self.cache_dir):
+            path.mkdir(parents=True, exist_ok=True)
+
 
 def _expand_path(value: str | Path) -> Path:
     return Path(value).expanduser()
@@ -58,19 +62,13 @@ def resolve_runtime_paths(
     cache_dir: str | Path | None = None,
 ) -> RuntimePaths:
     resolved_config_dir = _expand_path(
-        config_dir
-        or os.getenv(f"{ENV_PREFIX}_CONFIG_DIR")
-        or _default_config_dir()
+        config_dir or os.getenv(f"{ENV_PREFIX}_CONFIG_DIR") or _default_config_dir()
     )
     resolved_state_dir = _expand_path(
-        state_dir
-        or os.getenv(f"{ENV_PREFIX}_STATE_DIR")
-        or _default_state_dir()
+        state_dir or os.getenv(f"{ENV_PREFIX}_STATE_DIR") or _default_state_dir()
     )
     resolved_cache_dir = _expand_path(
-        cache_dir
-        or os.getenv(f"{ENV_PREFIX}_CACHE_DIR")
-        or _default_cache_dir()
+        cache_dir or os.getenv(f"{ENV_PREFIX}_CACHE_DIR") or _default_cache_dir()
     )
 
     return RuntimePaths(

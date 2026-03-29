@@ -8,6 +8,8 @@ import argparse
 import asyncio
 import logging
 import sys
+from pathlib import Path
+from textwrap import dedent
 from typing import Dict
 
 from mcp.server.fastmcp import FastMCP
@@ -26,6 +28,51 @@ from .tools import (
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+SAMPLE_CONNECTIONS_YAML = dedent(
+    """
+    # yaml-language-server: $schema=./connections.schema.json
+    # MCP Read-Only Grafana Server - Connection Configuration Sample
+    # Edit this file to configure your Grafana connections.
+    # Default runtime location: ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
+
+    # Basic Grafana connection
+    - connection_name: production_grafana
+      url: https://grafana.example.com
+      description: Production Grafana instance
+      # Optional: override default timeout (30 seconds)
+      # timeout: 60
+
+    # Another Grafana instance
+    - connection_name: staging_grafana
+      url: https://staging-grafana.example.com
+      description: Staging environment Grafana
+      # Optional settings:
+      # timeout: 30
+      # verify_ssl: true  # Set to false for self-signed certificates (not recommended)
+
+    # Grafana Cloud instance
+    - connection_name: grafana_cloud
+      url: https://myorg.grafana.net
+      description: Grafana Cloud instance
+
+    # Local development Grafana
+    - connection_name: local_grafana
+      url: http://localhost:3000
+      description: Local development Grafana
+      # For local instances, you might want to disable SSL verification
+      verify_ssl: false
+
+    # Notes:
+    # - Credentials are read from environment variables:
+    #     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME>
+    #     - API key (Bearer): GRAFANA_API_KEY_<CONNECTION_NAME>
+    #   If both are set, API key takes precedence.
+    # - Connection names should use only letters, numbers, underscores, and hyphens
+    # - URLs should not include trailing slashes
+    # - Credentials are reloaded from the runtime environment and persisted session state before each request to support token rotation
+    # - If both sources contain a session cookie, the persisted session state wins until you update or remove it
+    """
+).lstrip()
 
 
 class ReadOnlyGrafanaServer:
@@ -98,6 +145,22 @@ class ReadOnlyGrafanaServer:
         self.mcp.run()
 
 
+def write_sample_config(
+    runtime_paths: RuntimePaths, *, overwrite: bool = False
+) -> Path:
+    """Write a sample connections.yaml for package-based installs."""
+    runtime_paths.ensure_directories()
+
+    config_path = runtime_paths.connections_file
+    if config_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"Config file already exists at {config_path}. Re-run with --overwrite to replace it."
+        )
+
+    config_path.write_text(SAMPLE_CONNECTIONS_YAML, encoding="utf-8")
+    return config_path
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -122,6 +185,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Print resolved config/state/cache paths and exit",
     )
     parser.add_argument(
+        "--write-sample-config",
+        action="store_true",
+        help="Write a sample connections.yaml to the resolved config path and exit",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace connections.yaml when used with --write-sample-config",
+    )
+    parser.add_argument(
         "--allow-admin",
         action="store_true",
         help="Enable admin-only endpoints (Provisioning API). Requires Grafana admin permissions.",
@@ -133,11 +206,23 @@ def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
 
+    if args.overwrite and not args.write_sample_config:
+        parser.error("--overwrite can only be used with --write-sample-config")
+
     runtime_paths = resolve_runtime_paths(
         config_dir=args.config_dir,
         state_dir=args.state_dir,
         cache_dir=args.cache_dir,
     )
+
+    if args.write_sample_config:
+        try:
+            config_path = write_sample_config(runtime_paths, overwrite=args.overwrite)
+        except FileExistsError as exc:
+            parser.error(str(exc))
+        print(f"Wrote sample config to {config_path}")
+        if not args.print_paths:
+            return
 
     if args.print_paths:
         print(runtime_paths.render())

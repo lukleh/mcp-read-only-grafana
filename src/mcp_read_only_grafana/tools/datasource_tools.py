@@ -43,9 +43,7 @@ def register_datasource_tools(
         return json.dumps(datasources, indent=2)
 
     @mcp.tool()
-    async def get_datasource_health(
-        connection_name: str, datasource_uid: str
-    ) -> str:
+    async def get_datasource_health(connection_name: str, datasource_uid: str) -> str:
         """
         Run the health check for a specific datasource.
 

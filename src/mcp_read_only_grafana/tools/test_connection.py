@@ -3,15 +3,11 @@
 
 import asyncio
 import sys
-from pathlib import Path
 from typing import Optional
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from src.config import ConfigParser
-from src.grafana_connector import GrafanaConnector
-from src.runtime_paths import resolve_runtime_paths, RuntimePaths
+from ..config import ConfigParser
+from ..grafana_connector import GrafanaConnector
+from ..runtime_paths import RuntimePaths, resolve_runtime_paths
 
 
 async def test_connection(
@@ -86,8 +82,7 @@ async def test_connection(
                 elif "timed out" in error_msg.lower():
                     print("  ❌ Connection timeout - check network or timeout settings")
                 elif (
-                    "connection" in error_msg.lower()
-                    or "connect" in error_msg.lower()
+                    "connection" in error_msg.lower() or "connect" in error_msg.lower()
                 ):
                     print("  ❌ Cannot connect to server - check URL")
                 else:

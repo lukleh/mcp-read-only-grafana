@@ -2,13 +2,9 @@
 """Validate Grafana connections configuration."""
 
 import sys
-from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from src.config import ConfigParser
-from src.runtime_paths import resolve_runtime_paths, RuntimePaths
+from ..config import ConfigParser
+from ..runtime_paths import RuntimePaths, resolve_runtime_paths
 
 
 def validate_config(runtime_paths: RuntimePaths) -> bool:

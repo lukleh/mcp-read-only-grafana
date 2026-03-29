@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=./connections.schema.json
 # MCP Read-Only Grafana Server - Connection Configuration Sample
-# Copy this file to ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
+# Edit this file to configure your Grafana connections.
+# Default runtime location: ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
 
 # Basic Grafana connection
 - connection_name: production_grafana

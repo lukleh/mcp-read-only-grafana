@@ -452,9 +452,7 @@ class GrafanaConnector:
         """Check the health of a specific datasource"""
         return await self._get(f"/datasources/uid/{datasource_uid}/health")
 
-    async def list_alerts(
-        self, folder_uid: str | None = None
-    ) -> list[Dict[str, Any]]:
+    async def list_alerts(self, folder_uid: str | None = None) -> list[Dict[str, Any]]:
         """List alert rules, optionally filtered by folder"""
         # Get alert rules from the new unified alerting API
         try:
@@ -1256,7 +1254,9 @@ class GrafanaConnector:
         Returns:
             Created mute timing
         """
-        return await self._post("/v1/provisioning/mute-timings", json_payload=mute_timing)
+        return await self._post(
+            "/v1/provisioning/mute-timings", json_payload=mute_timing
+        )
 
     async def update_mute_timing(
         self, name: str, mute_timing: Dict[str, Any]

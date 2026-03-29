@@ -1,24 +1,22 @@
-name: Tests
+name: Publish
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # Allow manual triggering
+    tags:
+      - "v*"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.12', '3.13', '3.14']
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
@@ -34,9 +32,9 @@ jobs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ runner.os }}-uv-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+        key: ${{ runner.os }}-uv-publish-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
         restore-keys: |
-          ${{ runner.os }}-uv-py${{ matrix.python-version }}-
+          ${{ runner.os }}-uv-publish-py${{ matrix.python-version }}-
 
     - name: Install dependencies
       run: |
@@ -48,16 +46,7 @@ jobs:
 
     - name: Run tests
       run: |
-        uv run pytest --junitxml=test-results/junit.xml
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: test-results-python-${{ matrix.python-version }}
-        path: |
-          test-results/
-        if-no-files-found: ignore
+        uv run pytest -q
 
   package-smoke:
     runs-on: ubuntu-latest
@@ -76,6 +65,16 @@ jobs:
       uses: astral-sh/setup-uv@v7
       with:
         version: "latest"
+
+    - name: Validate tag matches package version
+      run: |
+        package_version="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+        tag_version="${GITHUB_REF_NAME#v}"
+
+        if [ "$package_version" != "$tag_version" ]; then
+          echo "Tag version $tag_version does not match pyproject.toml version $package_version" >&2
+          exit 1
+        fi
 
     - name: Build package artifacts
       run: |
@@ -122,3 +121,36 @@ jobs:
           --cache-dir "$tmp_dir/cache" \
           --allow-admin \
           --print-paths
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - package-smoke
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcp-read-only-grafana
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        version: "latest"
+
+    - name: Build package artifacts
+      run: |
+        uv build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1

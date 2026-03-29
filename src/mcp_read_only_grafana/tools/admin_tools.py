@@ -55,9 +55,7 @@ def register_admin_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
-    async def get_provisioned_alert_rule(
-        connection_name: str, alert_uid: str
-    ) -> str:
+    async def get_provisioned_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
         [ADMIN] Get a specific alert rule by UID from the provisioning API.
 
@@ -104,9 +102,7 @@ def register_admin_tools(
         return json.dumps(exported, indent=2)
 
     @mcp.tool()
-    async def get_rule_group(
-        connection_name: str, folder_uid: str, group: str
-    ) -> str:
+    async def get_rule_group(connection_name: str, folder_uid: str, group: str) -> str:
         """
         [ADMIN] Get a specific alert rule group.
 
@@ -281,9 +277,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
-    async def create_alert_rule(
-        connection_name: str, rule: Dict[str, Any]
-    ) -> str:
+    async def create_alert_rule(connection_name: str, rule: Dict[str, Any]) -> str:
         """
         [ADMIN] Create a new alert rule.
 
