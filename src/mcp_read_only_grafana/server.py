@@ -11,7 +11,7 @@ import sys
 from importlib.resources import files
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict
+from typing import Callable, Dict
 
 from mcp.server.fastmcp import FastMCP
 
@@ -26,6 +26,8 @@ from .tools import (
     register_datasource_tools,
     register_user_tools,
 )
+from .tools import test_connection as test_connection_command
+from .tools import validate_config as validate_config_command
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -79,6 +81,10 @@ SAMPLE_CONNECTIONS_YAML = dedent(
     # - If both sources contain a session cookie, the persisted session state wins until you update or remove it
     """
 ).lstrip()
+SUBCOMMAND_HANDLERS: dict[str, Callable[[], None]] = {
+    "test-connection": test_connection_command.main,
+    "validate-config": validate_config_command.main,
+}
 
 
 class ReadOnlyGrafanaServer:
@@ -173,6 +179,7 @@ def write_sample_config(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
+        prog="mcp-read-only-grafana",
         description=(
             "MCP Read-Only Grafana Server - Secure read-only access to Grafana instances"
         )
@@ -209,12 +216,65 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable admin-only endpoints (Provisioning API). Requires Grafana admin permissions.",
     )
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=sorted(SUBCOMMAND_HANDLERS),
+        help="Optional management command to run instead of starting the MCP server",
+    )
+    parser.add_argument(
+        "command_args",
+        nargs=argparse.REMAINDER,
+        help=argparse.SUPPRESS,
+    )
     return parser
+
+
+def _forward_shared_runtime_args(args: argparse.Namespace) -> list[str]:
+    forwarded: list[str] = []
+    if args.config_dir:
+        forwarded.extend(["--config-dir", args.config_dir])
+    if args.state_dir:
+        forwarded.extend(["--state-dir", args.state_dir])
+    if args.cache_dir:
+        forwarded.extend(["--cache-dir", args.cache_dir])
+    if args.print_paths:
+        forwarded.append("--print-paths")
+    return forwarded
+
+
+def _dispatch_subcommand(args: argparse.Namespace) -> None:
+    """Execute a management subcommand through the public root CLI."""
+    forwarded_args = _forward_shared_runtime_args(args)
+    command_argv = [
+        f"mcp-read-only-grafana {args.command}",
+        *forwarded_args,
+        *args.command_args,
+    ]
+
+    original_argv = sys.argv
+    try:
+        sys.argv = command_argv
+        SUBCOMMAND_HANDLERS[args.command]()
+    finally:
+        sys.argv = original_argv
 
 
 def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
+
+    if args.command and (args.write_sample_config or args.overwrite):
+        parser.error(
+            "--write-sample-config and --overwrite can only be used without a subcommand"
+        )
+
+    if args.command and args.allow_admin:
+        parser.error("--allow-admin can only be used when starting the MCP server")
+
+    if args.command:
+        _dispatch_subcommand(args)
+        return
 
     if args.overwrite and not args.write_sample_config:
         parser.error("--overwrite can only be used with --write-sample-config")

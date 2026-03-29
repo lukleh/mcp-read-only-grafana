@@ -164,6 +164,15 @@ uvx mcp-read-only-grafana --allow-admin
 
 # Point the server at a different config root
 uvx mcp-read-only-grafana --config-dir /path/to/config-dir
+
+# Validate the generated configuration
+uvx mcp-read-only-grafana validate-config
+
+# Test all configured Grafana connections
+uvx mcp-read-only-grafana test-connection
+
+# Test one specific connection
+uvx mcp-read-only-grafana test-connection production_grafana
 ```
 
 ## Local Development
@@ -715,6 +724,8 @@ just lint
 # or
 uv run black src/mcp_read_only_grafana/
 uv run ruff check src/mcp_read_only_grafana/ tests/
+uv run mcp-read-only-grafana validate-config
+uv run mcp-read-only-grafana test-connection
 ```
 
 ## License

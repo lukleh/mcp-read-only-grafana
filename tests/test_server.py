@@ -177,6 +177,102 @@ def test_main_rejects_overwrite_without_write_sample_config(monkeypatch):
         server.main()
 
 
+def test_main_dispatches_validate_config_subcommand(monkeypatch, tmp_path):
+    """Root CLI should dispatch validate-config and forward shared runtime args."""
+    import sys
+
+    from mcp_read_only_grafana import server
+
+    captured: dict[str, list[str]] = {}
+
+    def fake_main():
+        captured["argv"] = sys.argv[:]
+
+    monkeypatch.setitem(server.SUBCOMMAND_HANDLERS, "validate-config", fake_main)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-read-only-grafana",
+            "--config-dir",
+            str(tmp_path / "config"),
+            "--state-dir",
+            str(tmp_path / "state"),
+            "--cache-dir",
+            str(tmp_path / "cache"),
+            "--print-paths",
+            "validate-config",
+        ],
+    )
+
+    server.main()
+
+    assert captured["argv"] == [
+        "mcp-read-only-grafana validate-config",
+        "--config-dir",
+        str(tmp_path / "config"),
+        "--state-dir",
+        str(tmp_path / "state"),
+        "--cache-dir",
+        str(tmp_path / "cache"),
+        "--print-paths",
+    ]
+
+
+def test_main_dispatches_test_connection_subcommand_args(monkeypatch, tmp_path):
+    """Root CLI should pass positional subcommand args through unchanged."""
+    import sys
+
+    from mcp_read_only_grafana import server
+
+    captured: dict[str, list[str]] = {}
+
+    def fake_main():
+        captured["argv"] = sys.argv[:]
+
+    monkeypatch.setitem(server.SUBCOMMAND_HANDLERS, "test-connection", fake_main)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-read-only-grafana",
+            "--config-dir",
+            str(tmp_path / "config"),
+            "test-connection",
+            "production",
+        ],
+    )
+
+    server.main()
+
+    assert captured["argv"] == [
+        "mcp-read-only-grafana test-connection",
+        "--config-dir",
+        str(tmp_path / "config"),
+        "production",
+    ]
+
+
+def test_main_rejects_allow_admin_with_subcommand(monkeypatch):
+    """Server-only flags should not be accepted together with management commands."""
+    import sys
+
+    from mcp_read_only_grafana import server
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-read-only-grafana",
+            "--allow-admin",
+            "validate-config",
+        ],
+    )
+
+    with pytest.raises(SystemExit):
+        server.main()
+
+
 def test_main_passes_allow_admin_to_server(monkeypatch, tmp_path):
     """The CLI should pass through the admin-mode flag when constructing the server."""
     import sys

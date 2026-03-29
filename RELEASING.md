@@ -9,7 +9,10 @@ Current package status:
 
 - The public interface starts with the package command: `mcp-read-only-grafana`.
 - Repository-facing docs should prefer the root command plus flags, not extra top-level helper scripts.
-- If this repo ever needs auxiliary operations beyond flags, add them as subcommands under `mcp-read-only-grafana ...` rather than introducing new public console entry points.
+- This repo uses root subcommands for auxiliary operations:
+  - `mcp-read-only-grafana validate-config`
+  - `mcp-read-only-grafana test-connection`
+- Future auxiliary operations should follow that same pattern rather than introducing new public console entry points.
 
 ## One-time PyPI setup
 
@@ -67,5 +70,5 @@ The same `Publish` workflow and manual approval gate should handle the prereleas
 ## Notes
 
 - The publish workflow validates that the Git tag matches `pyproject.toml`.
-- The smoke tests exercise the packaged CLI by writing a sample config plus schema and printing runtime paths from the built artifacts.
+- The smoke tests exercise the packaged CLI by writing a sample config plus schema, printing runtime paths, and running the root subcommands from the built artifacts.
 - Because `prevent_self_review` is currently disabled, `lukleh` can approve their own release.
