@@ -4,6 +4,7 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
 
 Current package status:
 - Published to PyPI as `0.1.0`
+- Next planned release from current branch: `0.1.1`
 
 ## CLI convention
 
@@ -38,8 +39,8 @@ Current repository setup:
 3. Create and push a matching version tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 4. GitHub Actions will start the `Publish` workflow.
