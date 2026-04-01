@@ -60,7 +60,7 @@ class GrafanaConnector:
     Authentication:
         Supports two authentication methods:
         - API key (Bearer token): Set GRAFANA_API_KEY_<CONNECTION_NAME>
-        - Session cookie: Set GRAFANA_SESSION_<CONNECTION_NAME>
+        - Deprecated session cookie fallback: Set GRAFANA_SESSION_<CONNECTION_NAME>
 
         If both are configured, API key takes precedence.
 

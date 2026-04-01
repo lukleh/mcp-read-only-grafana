@@ -73,8 +73,14 @@ class GrafanaConnection(BaseModel):
     description: str = Field("", description="Description of this Grafana instance")
     timeout: int = Field(30, description="Request timeout in seconds")
     verify_ssl: bool = Field(True, description="Verify SSL certificates")
-    session_token: str | None = Field(None, description="Grafana session token")
-    api_key: str | None = Field(None, description="Grafana API key (Bearer token)")
+    session_token: str | None = Field(
+        None,
+        description="Deprecated Grafana session token fallback",
+    )
+    api_key: str | None = Field(
+        None,
+        description="Preferred Grafana API key (Bearer token)",
+    )
 
     _state_path: Path | None = PrivateAttr(default=None)
     _configured_session_token: str | None = PrivateAttr(default=None)
@@ -139,7 +145,7 @@ class GrafanaConnection(BaseModel):
         return merged
 
     def reload_session_token(self) -> str:
-        """Reload session token from YAML config, runtime environment, and state."""
+        """Reload deprecated session-token fallback from YAML, env, and state."""
         session_token = self._load_credential_values().get(self.get_env_var_name())
         if not session_token:
             raise ValueError(
@@ -151,7 +157,7 @@ class GrafanaConnection(BaseModel):
         return session_token
 
     def reload_api_key(self) -> str:
-        """Reload API key from YAML config, runtime environment, and state."""
+        """Reload preferred API key from YAML config, env, and state."""
         api_key = self._load_credential_values().get(self.get_api_key_env_var_name())
         if not api_key:
             raise ValueError(

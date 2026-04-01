@@ -41,12 +41,12 @@
       },
       "session_token": {
         "type": "string",
-        "description": "Optional Grafana session cookie stored directly in the YAML config. Useful for local-only setups; rotated session state still overrides this value.",
+        "description": "Deprecated Grafana session cookie stored directly in the YAML config. Keep this only as a temporary local fallback; rotated session state still overrides this value and API keys are preferred for stable MCP access.",
         "examples": ["your_grafana_session_cookie"]
       },
       "api_key": {
         "type": "string",
-        "description": "Optional Grafana API key or service-account token stored directly in the YAML config.",
+        "description": "Preferred Grafana API key or service-account token stored directly in the YAML config.",
         "examples": ["glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
       }
     }

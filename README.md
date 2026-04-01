@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml/badge.svg)](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml)
 
-A secure MCP (Model Context Protocol) server that provides access to Grafana instances using session authentication or API keys.
+A secure MCP (Model Context Protocol) server that provides access to Grafana instances using Grafana API keys or service-account tokens, with deprecated session-cookie fallback support.
 
 > Default layout:
 > - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
@@ -16,8 +16,8 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 - **Read-only by default** - All operations are read-only unless `--allow-admin` is enabled
 - **Optional admin mode** - Enable write operations (create/update/delete alerts) with `--allow-admin` flag
-- **Session-based authentication** - Uses Grafana session cookies for secure access (default) and also supports Grafana API keys
-- **Automatic token refresh** - Grafana rotates session tokens every 10 minutes; the server automatically captures refreshed tokens from response headers and persists them to `session_tokens.json` (session-cookie mode only)
+- **API key first authentication** - Prefers Grafana API keys or service-account tokens for stable machine access
+- **Deprecated session-cookie fallback** - Still supports Grafana session cookies, including automatic capture of rotated cookies in `session_tokens.json`
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
 - **Multiple instances** - Support for multiple Grafana connections
 - **Comprehensive API coverage** - Access dashboards, panels, folders, datasources, and alerts
@@ -36,12 +36,16 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 ```bash
 # Run the published package without cloning the repository
-uvx mcp-read-only-grafana --write-sample-config
+uvx mcp-read-only-grafana@latest --write-sample-config
 
 # Or install it once and reuse the command directly
 uv tool install mcp-read-only-grafana
 mcp-read-only-grafana --write-sample-config
 ```
+
+When using `uvx`, prefer `mcp-read-only-grafana@latest` in user-facing docs and
+MCP client configs. This avoids reusing a stale cached tool environment after a
+new release is published.
 
 The command above writes a starter config and matching schema to:
 
@@ -51,7 +55,7 @@ The command above writes a starter config and matching schema to:
 ### 2. Confirm Runtime Paths
 
 ```bash
-uvx mcp-read-only-grafana --print-paths
+uvx mcp-read-only-grafana@latest --print-paths
 ```
 
 ### 3. Edit the Connections File
@@ -72,9 +76,9 @@ Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana
 ### 4. Set Up Authentication
 
 You can keep credentials either directly in `connections.yaml` or in the
-environment used to launch the server. For local shell testing you can export
-them directly; for normal MCP use, inject them through the client config when
-you want runtime overrides.
+environment used to launch the server. Prefer `api_key` for normal use. For
+local shell testing you can export credentials directly; for normal MCP use,
+inject them through the client config when you want runtime overrides.
 
 YAML credentials:
 
@@ -84,18 +88,19 @@ YAML credentials:
   api_key: glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-You can authenticate with either a session cookie or a Grafana API key:
+You can authenticate with either a Grafana API key or a deprecated session
+cookie fallback:
 
-- Session cookie:
-
-  ```bash
-  export GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
-  ```
-
-- API key:
+- API key or service-account token:
 
   ```bash
   export GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
+  ```
+
+- Deprecated session cookie fallback:
+
+  ```bash
+  export GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here
   ```
 
 Precedence is:
@@ -106,13 +111,16 @@ Precedence is:
 If both a session token and an API key are available for the same connection,
 the server prefers the API key.
 
-#### How to Get Your Grafana Session Token
+#### Deprecated: How to Get a Grafana Session Token
 
 1. Log in to Grafana in a web browser
 2. Open developer tools
 3. Go to Application/Storage -> Cookies
 4. Find the cookie named `grafana_session` or `grafana_sess`
 5. Copy the value and export or inject it as `GRAFANA_SESSION_<CONNECTION_NAME>`
+
+Use this only as a temporary fallback. Browser session cookies rotate and
+expire quickly, so they are less reliable than API keys for MCP usage.
 
 #### How to Get a Grafana API Key
 
@@ -133,26 +141,26 @@ requests, that persisted state file takes precedence over the live
 ```bash
 claude mcp add mcp-read-only-grafana \
   --scope user \
-  -e GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here \
-  -- uvx mcp-read-only-grafana
+  -e GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here \
+  -- uvx mcp-read-only-grafana@latest
 ```
 
 **Codex**
 
 ```bash
 codex mcp add mcp-read-only-grafana \
-  --env GRAFANA_SESSION_PRODUCTION_GRAFANA=your_session_token_here \
-  -- uvx mcp-read-only-grafana
+  --env GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here \
+  -- uvx mcp-read-only-grafana@latest
 ```
 
-You can swap `GRAFANA_SESSION_*` for `GRAFANA_API_KEY_*` in the MCP client
-config if you prefer API-key authentication.
+If you absolutely need the deprecated session-cookie fallback, swap
+`GRAFANA_API_KEY_*` for `GRAFANA_SESSION_*` in the MCP client config.
 
 If you intentionally want the admin-only endpoints, append `--allow-admin` to
 the launched command:
 
 ```bash
-uvx mcp-read-only-grafana --allow-admin
+uvx mcp-read-only-grafana@latest --allow-admin
 ```
 
 ### 6. Restart and Test
@@ -167,29 +175,29 @@ List all dashboards in the production Grafana instance.
 
 ```bash
 # Show the resolved runtime paths
-uvx mcp-read-only-grafana --print-paths
+uvx mcp-read-only-grafana@latest --print-paths
 
 # Write or refresh the default connections.yaml
-uvx mcp-read-only-grafana --write-sample-config
-uvx mcp-read-only-grafana --write-sample-config --overwrite
+uvx mcp-read-only-grafana@latest --write-sample-config
+uvx mcp-read-only-grafana@latest --write-sample-config --overwrite
 
 # Run the server with the default home-directory config
-uvx mcp-read-only-grafana
+uvx mcp-read-only-grafana@latest
 
 # Enable admin-only endpoints
-uvx mcp-read-only-grafana --allow-admin
+uvx mcp-read-only-grafana@latest --allow-admin
 
 # Point the server at a different config root
-uvx mcp-read-only-grafana --config-dir /path/to/config-dir
+uvx mcp-read-only-grafana@latest --config-dir /path/to/config-dir
 
 # Validate the generated configuration
-uvx mcp-read-only-grafana validate-config
+uvx mcp-read-only-grafana@latest validate-config
 
 # Test all configured Grafana connections
-uvx mcp-read-only-grafana test-connection
+uvx mcp-read-only-grafana@latest test-connection
 
 # Test one specific connection
-uvx mcp-read-only-grafana test-connection production_grafana
+uvx mcp-read-only-grafana@latest test-connection production_grafana
 ```
 
 ## Local Development
@@ -639,8 +647,8 @@ Each connection in `connections.yaml` supports:
 
 ### Environment Variables
 
-- `GRAFANA_SESSION_<CONNECTION_NAME>`: Session token (optional if API key provided)
-- `GRAFANA_API_KEY_<CONNECTION_NAME>`: Grafana API key / service-account token (optional)
+- `GRAFANA_API_KEY_<CONNECTION_NAME>`: Preferred Grafana API key / service-account token
+- `GRAFANA_SESSION_<CONNECTION_NAME>`: Deprecated session-token fallback
 - `GRAFANA_TIMEOUT_<CONNECTION_NAME>`: Override timeout for specific connection
 
 ## Security
@@ -651,7 +659,7 @@ The server implements a **secure-by-default model**:
 2. **Opt-in admin mode** - Write operations require explicit `--allow-admin` flag
 3. **Timeout protection** - Configurable request timeouts (default: 30s)
 4. **SSL verification** - Enabled by default for all connections
-5. **Session token security** - Tokens stored only in environment variables, never in code
+5. **Credential security** - Keep API keys or fallback session tokens in local config, env, or MCP-managed state only
 
 ### Default Mode (Read-Only)
 
@@ -668,26 +676,28 @@ When running with `--allow-admin`, additional write operations are enabled:
 - **PUT** - Update existing alert rules, contact points, notification policies, mute timings, templates
 - **DELETE** - Remove alert rules, contact points, notification policies, mute timings, templates
 
-> **Warning:** Admin mode enables destructive operations. Only enable when you need to manage Grafana alerting resources. The API key or session must have Grafana admin permissions.
+> **Warning:** Admin mode enables destructive operations. Only enable when you need to manage Grafana alerting resources. The API key or deprecated session fallback must have Grafana admin permissions.
 
 ### Additional Security Considerations
 
 1. **Credentials are sensitive** - Never commit real credentials or your local `connections.yaml` to version control
-2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
-3. **Permission scope** - The server inherits the read permissions of the provided session or API key
+2. **Automatic fallback refresh** - Deprecated session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
+3. **Permission scope** - The server inherits the read permissions of the provided API key or deprecated session fallback
 4. **Prefer local-only secret storage** - Keep secrets in local `connections.yaml`, MCP-injected env, or the rotated `session_tokens.json` cache, never in source-controlled config
 
 ## Troubleshooting
 
 ### Session Token Management
 
-**Automatic Token Refresh**: Grafana rotates session tokens every 10 minutes. The server automatically:
+Session tokens are deprecated and should be used only as a temporary fallback.
+
+**Automatic Token Refresh**: Grafana rotates session tokens every 10 minutes. When you are using the deprecated session-cookie fallback, the server automatically:
 - Captures refreshed tokens from Grafana API response headers
 - Updates tokens in memory immediately
 - Persists new tokens back to `session_tokens.json`
-- **No manual token updates needed** - the server keeps itself authenticated!
+- Reuses those rotated tokens on later requests
 
-If you manually need to update a token:
+If you manually need to update a fallback session token:
 1. Update the `session_token` in `connections.yaml` or the `GRAFANA_SESSION_*` value in your MCP client env/current shell
 2. Also remove or update the cached value in `session_tokens.json` if one was already persisted
 3. No restart is needed once the active credential source has been updated
@@ -695,9 +705,10 @@ If you manually need to update a token:
 ### Authentication Failed
 
 If you get authentication errors despite automatic refresh:
-1. Verify the initial token or API key is valid in `connections.yaml`, your current environment, or `session_tokens.json`
-2. Check that the state directory is writable (needed for automatic token persistence)
-3. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
+1. Prefer switching to an API key if you are still using the deprecated session fallback
+2. Verify the current token or API key is valid in `connections.yaml`, your current environment, or `session_tokens.json`
+3. Check that the state directory is writable (needed for automatic token persistence)
+4. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
 
 ### Connection Timeout
 

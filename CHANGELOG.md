@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-04-01
+
+### Changed
+
+- Marked `session_token` as a deprecated fallback across the README, sample config, generated bootstrap config, and JSON schema, and now recommend `api_key` / service-account tokens as the primary auth path.
+- Clarified README examples to prefer `uvx mcp-read-only-grafana@latest` in user-facing install and MCP client setup docs.
+
 ## [0.1.3] - 2026-04-01
 
 ### Added

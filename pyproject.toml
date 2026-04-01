@@ -1,6 +1,6 @@
 [project]
 name = "mcp-read-only-grafana"
-version = "0.1.3"
+version = "0.1.4"
 description = "MCP server for read-only access to Grafana instances"
 readme = "README.md"
 requires-python = ">=3.11"

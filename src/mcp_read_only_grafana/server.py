@@ -42,13 +42,17 @@ SAMPLE_CONNECTIONS_YAML = dedent(
     # MCP Read-Only Grafana Server - Connection Configuration Sample
     # Edit this file to configure your Grafana connections.
     # Default runtime location: ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
+    # Prefer `api_key` for normal use.
+    # `session_token` is deprecated and should only be used as a temporary fallback.
 
     # Basic Grafana connection
     - connection_name: production_grafana
       url: https://grafana.example.com
       description: Production Grafana instance
-      # Optional: store a static API key directly in YAML
+      # Preferred: store a static API key or service-account token directly in YAML
       # api_key: glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      # Deprecated fallback: store a session cookie only for short-lived local use
+      # session_token: your_grafana_session_cookie
       # Optional: override default timeout (30 seconds)
       # timeout: 60
 
@@ -74,11 +78,11 @@ SAMPLE_CONNECTIONS_YAML = dedent(
 
     # Notes:
     # - Credentials can be stored directly in this file via:
-    #     - session_token: Grafana session cookie
-    #     - api_key: Grafana API key / service-account token
+    #     - api_key: Grafana API key / service-account token (preferred)
+    #     - session_token: Grafana session cookie (deprecated fallback)
     # - You can still override credentials from the runtime environment:
-    #     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME>
     #     - API key (Bearer): GRAFANA_API_KEY_<CONNECTION_NAME>
+    #     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME> (deprecated fallback)
     # - Precedence is:
     #     1. session_tokens.json (rotated session cookies)
     #     2. runtime environment variables
@@ -86,6 +90,7 @@ SAMPLE_CONNECTIONS_YAML = dedent(
     # - If both session and API key are available for a connection, API key takes precedence.
     # - Connection names should use only letters, numbers, underscores, and hyphens
     # - URLs should not include trailing slashes
+    # - Session cookies rotate and expire quickly; prefer API keys for stable MCP access
     # - Credentials are reloaded before each request to support env overrides and token rotation
     """
 ).lstrip()
