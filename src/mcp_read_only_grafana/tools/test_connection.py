@@ -71,8 +71,12 @@ async def test_connection(
                     or "session may have expired" in error_msg.lower()
                 ):
                     print(
-                        "  ❌ Authentication failed - check MCP-injected env or cached session state"
+                        "  ❌ Authentication failed - check YAML credentials, MCP-injected env, or cached session state"
                     )
+                    print(
+                        f"     Has YAML session token: {bool(connection._configured_session_token)}"
+                    )
+                    print(f"     Has YAML API key: {bool(connection._configured_api_key)}")
                     print(f"     Session variable: {connection.get_env_var_name()}")
                     print(
                         f"     API key variable: {connection.get_api_key_env_var_name()}"

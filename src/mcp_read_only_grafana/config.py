@@ -77,9 +77,16 @@ class GrafanaConnection(BaseModel):
     api_key: str | None = Field(None, description="Grafana API key (Bearer token)")
 
     _state_path: Path | None = PrivateAttr(default=None)
+    _configured_session_token: str | None = PrivateAttr(default=None)
+    _configured_api_key: str | None = PrivateAttr(default=None)
     _runtime_env_provider: Callable[[], Mapping[str, str]] = PrivateAttr(
         default_factory=lambda: _copy_runtime_env
     )
+
+    def model_post_init(self, __context: Any) -> None:
+        """Preserve credentials explicitly declared in the YAML config."""
+        self._configured_session_token = self.session_token
+        self._configured_api_key = self.api_key
 
     @field_validator("connection_name")
     @classmethod
@@ -116,29 +123,41 @@ class GrafanaConnection(BaseModel):
         return f"GRAFANA_TIMEOUT_{self.connection_name.upper().replace('-', '_')}"
 
     def _load_credential_values(self) -> dict[str, str]:
-        return _merge_credential_sources(
-            self._state_path,
-            self._runtime_env_provider(),
-        )
+        configured_values: dict[str, str] = {}
+        if self._configured_session_token:
+            configured_values[self.get_env_var_name()] = self._configured_session_token
+        if self._configured_api_key:
+            configured_values[self.get_api_key_env_var_name()] = (
+                self._configured_api_key
+            )
+
+        merged = configured_values
+        runtime_env = self._runtime_env_provider()
+        if runtime_env:
+            merged.update(runtime_env)
+        merged.update(_read_state_file(self._state_path))
+        return merged
 
     def reload_session_token(self) -> str:
-        """Reload session token from runtime environment and cached state."""
+        """Reload session token from YAML config, runtime environment, and state."""
         session_token = self._load_credential_values().get(self.get_env_var_name())
         if not session_token:
             raise ValueError(
                 f"Missing session token for connection '{self.connection_name}'. "
-                f"Please set {self.get_env_var_name()} in the environment."
+                f"Please provide {self.get_env_var_name()} in the environment "
+                "or set session_token in connections.yaml."
             )
         self.session_token = session_token
         return session_token
 
     def reload_api_key(self) -> str:
-        """Reload API key from the runtime environment."""
+        """Reload API key from YAML config, runtime environment, and state."""
         api_key = self._load_credential_values().get(self.get_api_key_env_var_name())
         if not api_key:
             raise ValueError(
                 f"Missing API key for connection '{self.connection_name}'. "
-                f"Please set {self.get_api_key_env_var_name()} in the environment."
+                f"Please provide {self.get_api_key_env_var_name()} in the "
+                "environment or set api_key in connections.yaml."
             )
         self.api_key = api_key
         return api_key
@@ -201,7 +220,8 @@ class ConfigParser:
             raise ValueError(
                 f"Missing credentials for connection '{connection.connection_name}'. "
                 f"Please set {connection.get_env_var_name()} or "
-                f"{connection.get_api_key_env_var_name()} in the environment."
+                f"{connection.get_api_key_env_var_name()} in the environment, "
+                "or configure session_token/api_key in connections.yaml."
             )
 
         timeout_override = env_values.get(connection.get_timeout_env_var_name())

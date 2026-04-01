@@ -62,6 +62,7 @@ Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana
 - connection_name: production_grafana
   url: https://grafana.example.com
   description: Production Grafana instance
+  api_key: glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 - connection_name: staging_grafana
   url: https://staging-grafana.example.com
@@ -70,9 +71,18 @@ Edit `~/.config/lukleh/mcp-read-only-grafana/connections.yaml` with your Grafana
 
 ### 4. Set Up Authentication
 
-Set credentials in the environment used to launch the server. For local shell
-testing you can export them directly; for normal MCP use, inject them through
-the client config.
+You can keep credentials either directly in `connections.yaml` or in the
+environment used to launch the server. For local shell testing you can export
+them directly; for normal MCP use, inject them through the client config when
+you want runtime overrides.
+
+YAML credentials:
+
+```yaml
+- connection_name: production_grafana
+  url: https://grafana.example.com
+  api_key: glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 You can authenticate with either a session cookie or a Grafana API key:
 
@@ -88,7 +98,13 @@ You can authenticate with either a session cookie or a Grafana API key:
   export GRAFANA_API_KEY_PRODUCTION_GRAFANA=your_api_key_here
   ```
 
-If both are set for the same connection, the server prefers the API key.
+Precedence is:
+- Rotated session cookies in `session_tokens.json`
+- Runtime environment variables
+- Credentials declared in `connections.yaml`
+
+If both a session token and an API key are available for the same connection,
+the server prefers the API key.
 
 #### How to Get Your Grafana Session Token
 
@@ -107,7 +123,8 @@ If both are set for the same connection, the server prefers the API key.
 If you start with a session cookie, the server will keep refreshed cookies in
 `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`. On later
 requests, that persisted state file takes precedence over the live
-`GRAFANA_SESSION_*` environment value until you update or remove it.
+`GRAFANA_SESSION_*` environment value and any static `session_token` in
+`connections.yaml` until you update or remove it.
 
 ### 5. Configure Your MCP Client
 
@@ -655,10 +672,10 @@ When running with `--allow-admin`, additional write operations are enabled:
 
 ### Additional Security Considerations
 
-1. **Credentials are sensitive** - Never commit real credentials or `connections.yaml` to version control
+1. **Credentials are sensitive** - Never commit real credentials or your local `connections.yaml` to version control
 2. **Automatic token refresh** - Session tokens are automatically captured and persisted when Grafana rotates them (API keys are static)
 3. **Permission scope** - The server inherits the read permissions of the provided session or API key
-4. **No credential storage in code** - Tokens live only in explicit environment variables plus the rotated `session_tokens.json` cache
+4. **Prefer local-only secret storage** - Keep secrets in local `connections.yaml`, MCP-injected env, or the rotated `session_tokens.json` cache, never in source-controlled config
 
 ## Troubleshooting
 
@@ -671,14 +688,14 @@ When running with `--allow-admin`, additional write operations are enabled:
 - **No manual token updates needed** - the server keeps itself authenticated!
 
 If you manually need to update a token:
-1. Update the `GRAFANA_SESSION_*` value in your MCP client env or current shell
+1. Update the `session_token` in `connections.yaml` or the `GRAFANA_SESSION_*` value in your MCP client env/current shell
 2. Also remove or update the cached value in `session_tokens.json` if one was already persisted
 3. No restart is needed once the active credential source has been updated
 
 ### Authentication Failed
 
 If you get authentication errors despite automatic refresh:
-1. Verify the initial token is valid in your current environment or `session_tokens.json`
+1. Verify the initial token or API key is valid in `connections.yaml`, your current environment, or `session_tokens.json`
 2. Check that the state directory is writable (needed for automatic token persistence)
 3. Ensure the environment variable name matches the connection name (e.g., `GRAFANA_SESSION_PRODUCTION_GRAFANA` for `connection_name: production_grafana`)
 

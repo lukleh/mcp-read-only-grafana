@@ -47,6 +47,8 @@ SAMPLE_CONNECTIONS_YAML = dedent(
     - connection_name: production_grafana
       url: https://grafana.example.com
       description: Production Grafana instance
+      # Optional: store a static API key directly in YAML
+      # api_key: glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       # Optional: override default timeout (30 seconds)
       # timeout: 60
 
@@ -71,14 +73,20 @@ SAMPLE_CONNECTIONS_YAML = dedent(
       verify_ssl: false
 
     # Notes:
-    # - Credentials are read from environment variables:
+    # - Credentials can be stored directly in this file via:
+    #     - session_token: Grafana session cookie
+    #     - api_key: Grafana API key / service-account token
+    # - You can still override credentials from the runtime environment:
     #     - Session cookie: GRAFANA_SESSION_<CONNECTION_NAME>
     #     - API key (Bearer): GRAFANA_API_KEY_<CONNECTION_NAME>
-    #   If both are set, API key takes precedence.
+    # - Precedence is:
+    #     1. session_tokens.json (rotated session cookies)
+    #     2. runtime environment variables
+    #     3. connections.yaml credentials
+    # - If both session and API key are available for a connection, API key takes precedence.
     # - Connection names should use only letters, numbers, underscores, and hyphens
     # - URLs should not include trailing slashes
-    # - Credentials are reloaded from the runtime environment and persisted session state before each request to support token rotation
-    # - If both sources contain a session cookie, the persisted session state wins until you update or remove it
+    # - Credentials are reloaded before each request to support env overrides and token rotation
     """
 ).lstrip()
 SUBCOMMAND_HANDLERS: dict[str, Callable[[], None]] = {

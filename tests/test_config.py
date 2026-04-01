@@ -149,6 +149,56 @@ def test_config_parser_api_key_only():
         Path(config_path).unlink()
 
 
+def test_config_parser_yaml_credentials_without_env():
+    """YAML-declared credentials should be accepted without env vars."""
+    yaml_content = """
+- connection_name: test_grafana
+  url: https://grafana.example.com
+  session_token: yaml_session_token
+  api_key: yaml_api_key
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        config_path = f.name
+
+    try:
+        parser = ConfigParser(config_path, runtime_env_provider=lambda: {})
+        [conn] = parser.load_config()
+
+        assert conn.session_token == "yaml_session_token"
+        assert conn.api_key == "yaml_api_key"
+    finally:
+        Path(config_path).unlink()
+
+
+def test_config_parser_runtime_env_overrides_yaml_credentials():
+    """Runtime env should override YAML defaults when both are present."""
+    yaml_content = """
+- connection_name: test_grafana
+  url: https://grafana.example.com
+  session_token: yaml_session_token
+  api_key: yaml_api_key
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        config_path = f.name
+
+    try:
+        parser = ConfigParser(
+            config_path,
+            runtime_env_provider=lambda: {
+                "GRAFANA_SESSION_TEST_GRAFANA": "runtime_session_token",
+                "GRAFANA_API_KEY_TEST_GRAFANA": "runtime_api_key",
+            },
+        )
+        [conn] = parser.load_config()
+
+        assert conn.session_token == "runtime_session_token"
+        assert conn.api_key == "runtime_api_key"
+    finally:
+        Path(config_path).unlink()
+
+
 def test_config_parser_missing_file():
     """Test that missing config file raises FileNotFoundError"""
     parser = ConfigParser("nonexistent.yaml")
@@ -181,3 +231,16 @@ def test_direct_connection_reload_uses_runtime_environment(monkeypatch):
 
     assert conn.reload_session_token() == "runtime-session"
     assert conn.reload_api_key() == "runtime-api-key"
+
+
+def test_direct_connection_reload_uses_configured_credentials_without_env():
+    """Direct GrafanaConnection instances should fall back to configured credentials."""
+    conn = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="configured-session",
+        api_key="configured-api-key",
+    )
+
+    assert conn.reload_session_token() == "configured-session"
+    assert conn.reload_api_key() == "configured-api-key"

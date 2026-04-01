@@ -38,6 +38,16 @@
         "type": "boolean",
         "default": true,
         "description": "Whether to verify SSL certificates. Set to false only for development/testing with self-signed certs."
+      },
+      "session_token": {
+        "type": "string",
+        "description": "Optional Grafana session cookie stored directly in the YAML config. Useful for local-only setups; rotated session state still overrides this value.",
+        "examples": ["your_grafana_session_cookie"]
+      },
+      "api_key": {
+        "type": "string",
+        "description": "Optional Grafana API key or service-account token stored directly in the YAML config.",
+        "examples": ["glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
       }
     }
   },
@@ -49,7 +59,8 @@
         "url": "https://grafana.example.com",
         "description": "Production Grafana instance",
         "timeout": 30,
-        "verify_ssl": true
+        "verify_ssl": true,
+        "api_key": "glsa_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
       }
     ],
     [

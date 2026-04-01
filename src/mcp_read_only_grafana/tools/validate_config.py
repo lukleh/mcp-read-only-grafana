@@ -29,6 +29,8 @@ def validate_config(runtime_paths: RuntimePaths) -> bool:
             print(f"    Description: {conn.description}")
             print(f"    Timeout: {conn.timeout}s")
             print(f"    Verify SSL: {conn.verify_ssl}")
+            print(f"    Has YAML session token: {bool(conn._configured_session_token)}")
+            print(f"    Has YAML API key: {bool(conn._configured_api_key)}")
             print(f"    Session variable: {conn.get_env_var_name()}")
             print(f"    API key variable: {conn.get_api_key_env_var_name()}")
             print()

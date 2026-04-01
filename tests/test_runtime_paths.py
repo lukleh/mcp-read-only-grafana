@@ -86,3 +86,33 @@ def test_state_file_overrides_runtime_environment_for_session_token(tmp_path):
 
     assert connection.session_token == "state-session"
     assert connection.api_key == "runtime-api-key"
+
+
+def test_state_file_overrides_yaml_session_token(tmp_path):
+    config_dir = tmp_path / "config"
+    state_dir = tmp_path / "state"
+    config_dir.mkdir()
+    state_dir.mkdir()
+
+    (config_dir / "connections.yaml").write_text(
+        "- connection_name: test_grafana\n"
+        "  url: https://grafana.example.com\n"
+        "  session_token: yaml-session\n"
+        "  api_key: yaml-api-key\n",
+        encoding="utf-8",
+    )
+    (state_dir / "session_tokens.json").write_text(
+        '{"GRAFANA_SESSION_TEST_GRAFANA": "state-session"}\n',
+        encoding="utf-8",
+    )
+
+    parser = ConfigParser(
+        config_dir / "connections.yaml",
+        state_path=state_dir / "session_tokens.json",
+        runtime_env_provider=lambda: {},
+    )
+
+    [connection] = parser.load_config()
+
+    assert connection.session_token == "state-session"
+    assert connection.api_key == "yaml-api-key"

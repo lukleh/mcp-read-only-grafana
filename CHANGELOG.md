@@ -7,6 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-04-01
+
+### Added
+
+- Support for storing Grafana `session_token` and `api_key` credentials directly in `connections.yaml`, matching the MCP-owned connection model used by the SQL server.
+- Coverage for YAML-backed credentials, environment overrides, and state-file precedence in config/runtime tests.
+
+### Changed
+
+- Configuration validation, sample config, schema, and server-generated bootstrap files now document and surface YAML-provided credentials.
+
 ## [0.1.2] - 2026-04-01
 
 ### Added
