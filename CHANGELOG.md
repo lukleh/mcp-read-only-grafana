@@ -7,6 +7,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-04-01
+
 ### Added
 
 - Root CLI subcommands for `mcp-read-only-grafana validate-config` and `mcp-read-only-grafana test-connection`.
@@ -14,6 +16,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Standardized maintainer and smoke-test paths on the single public root command.
+
+### Fixed
+
+- `get_current_user` now returns a structured `unavailable` result for API-key auth instead of surfacing Grafana's raw `404` response.
+- `get_datasource_health` now returns structured `unsupported` or `not_found` results when a datasource plugin does not implement the Grafana health endpoint.
 
 ## [0.1.0] - 2026-03-29
 

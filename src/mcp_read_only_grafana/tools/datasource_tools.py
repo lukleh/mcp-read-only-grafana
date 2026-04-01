@@ -12,8 +12,57 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
+from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
+
+
+async def _get_datasource_health_result(
+    connector: GrafanaConnector,
+    datasource_uid: str,
+) -> Dict[str, Any]:
+    """Return datasource health or a structured explanation for unsupported cases."""
+    try:
+        return await connector.get_datasource_health(datasource_uid)
+    except GrafanaAPIError as exc:
+        if exc.status_code != 404:
+            raise
+
+    try:
+        datasources = await connector.list_datasources()
+    except Exception:
+        datasources = []
+
+    datasource = next(
+        (item for item in datasources if item.get("uid") == datasource_uid),
+        None,
+    )
+
+    if datasource:
+        return {
+            "status": "unsupported",
+            "supported": False,
+            "reason": "health_endpoint_not_implemented",
+            "datasource_uid": datasource_uid,
+            "datasource_name": datasource.get("name"),
+            "datasource_type": datasource.get("type"),
+            "message": (
+                "Grafana returned 404 for the datasource health endpoint. "
+                "This usually means the datasource plugin does not implement "
+                "/api/datasources/uid/:uid/health."
+            ),
+        }
+
+    return {
+        "status": "not_found",
+        "supported": False,
+        "reason": "datasource_uid_not_found",
+        "datasource_uid": datasource_uid,
+        "message": (
+            "Grafana returned 404 for the datasource health endpoint and the "
+            "datasource UID was not present in the datasource list."
+        ),
+    }
 
 
 def register_datasource_tools(
@@ -53,9 +102,11 @@ def register_datasource_tools(
 
         Returns:
             JSON string with health information reported by Grafana.
+            If Grafana returns 404, the tool returns a structured
+            `unsupported` or `not_found` result instead of a raw error.
         """
         connector = get_connector(connectors, connection_name)
-        health = await connector.get_datasource_health(datasource_uid)
+        health = await _get_datasource_health_result(connector, datasource_uid)
         return json.dumps(health, indent=2)
 
     @mcp.tool()

@@ -7,12 +7,33 @@ This module provides tools for:
 """
 
 import json
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
+from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
+
+
+async def _get_current_user_result(connector: GrafanaConnector) -> Dict[str, Any]:
+    """Return the current user profile or a structured auth-mode explanation."""
+    try:
+        return await connector.get_current_user()
+    except GrafanaAPIError as exc:
+        if exc.status_code != 404 or not connector.connection.api_key:
+            raise
+
+        return {
+            "status": "unavailable",
+            "reason": "api_key_auth_has_no_user_profile",
+            "auth_mode": "api_key",
+            "message": (
+                "Current user profile is only available with session-based "
+                "authentication. This connection is using an API key or "
+                "service-account token, so Grafana returns 404 for /api/user."
+            ),
+        }
 
 
 def register_user_tools(
@@ -40,9 +61,11 @@ def register_user_tools(
 
         Returns:
             JSON string describing the current user (id, login, email, role, etc.).
+            When the connection uses API key auth, returns a structured
+            explanation instead of surfacing Grafana's raw 404 response.
         """
         connector = get_connector(connectors, connection_name)
-        user = await connector.get_current_user()
+        user = await _get_current_user_result(connector)
         return json.dumps(user, indent=2)
 
     @mcp.tool()

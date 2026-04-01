@@ -282,6 +282,17 @@ List configured data sources.
 
 **Returns:** Data source names, types, UIDs, and configuration
 
+### `get_datasource_health`
+Run the datasource-specific Grafana health check when the datasource plugin supports it.
+
+> **Note:** Not every datasource plugin implements `GET /api/datasources/uid/:uid/health`. When Grafana returns `404`, the MCP returns a structured `unsupported` or `not_found` result instead of surfacing the raw error.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `datasource_uid` (required): UID of the datasource
+
+**Returns:** Health information for supported datasources, or a structured explanation when the health endpoint is unavailable
+
 ### `query_prometheus`
 Execute a PromQL query against a Prometheus datasource.
 
@@ -417,7 +428,7 @@ Get current organization information.
 ### `get_current_user`
 Return the profile for the currently authenticated Grafana user (name, login, email, role, theme, etc.).
 
-> **Note:** This endpoint only works with session-based authentication. API keys are service account tokens and are not associated with a user profile - calls will return a 404 error when using API key auth.
+> **Note:** This endpoint only works with session-based authentication. API keys are service account tokens and are not associated with a user profile. When API key auth is in use, the MCP returns a structured `unavailable` result instead of surfacing Grafana's raw `404` response.
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
