@@ -7,6 +7,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-04-03
+
+### Added
+
+- Added `ty` as a supported development check for the packaged `src/` tree.
+- Added a repo-specific `AGENTS.md` contributor guide covering layout, commands, admin-mode guardrails, and security expectations.
+
+### Changed
+
+- Tightened dashboard search and folder-list parameter typing in the Grafana connector to keep the `src/` package clean under static analysis.
+- Reworked `RELEASING.md` into an evergreen release checklist with explicit validation, tagging, and publish steps.
+
 ## [0.1.4] - 2026-04-01
 
 ### Changed
