@@ -332,7 +332,7 @@ class GrafanaConnector:
         fields: list[str] | None = None,
     ) -> list[Dict[str, Any]]:
         """Search for dashboards by name or tag"""
-        params = {"type": "dash-db"}
+        params: dict[str, Any] = {"type": "dash-db"}
         if query:
             params["query"] = query
         if tag:
@@ -1295,7 +1295,7 @@ class GrafanaConnector:
         fields: list[str] | None = None,
     ) -> list[Dict[str, Any]]:
         """List all dashboards in a specific folder"""
-        params = {
+        params: dict[str, Any] = {
             "type": "dash-db",
             "folderUids": folder_uid,
         }
