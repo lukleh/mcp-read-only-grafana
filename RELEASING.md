@@ -4,12 +4,12 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
 
 Current package status:
 - Published to PyPI as `0.1.0`
-- Next planned release from current branch: `0.1.1`
+- Next planned release from current branch: `0.1.5`
 
 ## Changelog policy
 
 - Keep upcoming user-visible changes under `## [Unreleased]` in `CHANGELOG.md`.
-- On release, move those entries into a dated version section such as `## [0.1.1] - 2026-03-29`.
+- On release, move those entries into a dated version section such as `## [0.1.5] - 2026-03-29`.
 - Prefer concise bullets grouped under `Added`, `Changed`, and `Fixed`.
 - When creating GitHub release notes, reuse the matching `CHANGELOG.md` section instead of writing a second summary from scratch.
 
