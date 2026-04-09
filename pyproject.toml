@@ -40,6 +40,7 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.1.0",
     "ty>=0.0.28",
+    "vulture>=2.16",
 ]
 
 [build-system]
@@ -63,6 +64,13 @@ markers = [
     "integration: marks tests as integration tests (require live Grafana instance)",
     "unit: marks tests as unit tests (no external dependencies)",
 ]
+
+[tool.vulture]
+paths = ["src", "tests"]
+exclude = [".venv", "venv", "build", "dist", "node_modules", "__pycache__", "site-packages"]
+ignore_decorators = ["@*.tool*", "@pytest.fixture", "@field_validator", "@model_validator", "@validator"]
+ignore_names = ["model_config", "pytest_*"]
+min_confidence = 80
 
 [tool.ty.src]
 include = ["src"]
