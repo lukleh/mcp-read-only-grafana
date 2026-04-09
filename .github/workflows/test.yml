@@ -97,11 +97,10 @@ jobs:
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
           --print-paths
-        uvx --from dist/*.whl mcp-read-only-grafana \
+        uvx --from dist/*.whl mcp-grafana-write \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
-          --allow-admin \
           --print-paths
         uvx --from dist/*.whl mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \
@@ -132,11 +131,10 @@ jobs:
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
           --print-paths
-        uvx --from dist/*.tar.gz mcp-read-only-grafana \
+        uvx --from dist/*.tar.gz mcp-grafana-write \
           --config-dir "$tmp_dir/config" \
           --state-dir "$tmp_dir/state" \
           --cache-dir "$tmp_dir/cache" \
-          --allow-admin \
           --print-paths
         uvx --from dist/*.tar.gz mcp-read-only-grafana \
           --config-dir "$tmp_dir/config" \

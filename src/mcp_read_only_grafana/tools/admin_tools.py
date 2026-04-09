@@ -1,7 +1,7 @@
 """Write-capable MCP tools.
 
 This module provides tools that mutate Grafana resources.
-These tools are only registered when --allow-writes flag is provided.
+These tools are only registered by the write-capable public command.
 
 Includes:
 - Provisioned alert rule management
@@ -27,7 +27,7 @@ def register_admin_tools(
 ) -> None:
     """Register write-capable MCP tools.
 
-    These tools are only registered when --allow-writes flag is provided.
+    These tools are only registered by the write-capable public command.
 
     Args:
         mcp: FastMCP server instance
@@ -41,7 +41,7 @@ def register_admin_tools(
     @mcp.tool()
     async def list_provisioned_alert_rules(connection_name: str) -> str:
         """
-        [ADMIN] Fetch all provisioned alert rules via the read-only provisioning API.
+        [WRITE] Fetch all provisioned alert rules via the read-only provisioning API.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -56,7 +56,7 @@ def register_admin_tools(
     @mcp.tool()
     async def get_provisioned_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
-        [ADMIN] Get a specific alert rule by UID from the provisioning API.
+        [WRITE] Get a specific alert rule by UID from the provisioning API.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -72,7 +72,7 @@ def register_admin_tools(
     @mcp.tool()
     async def export_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
-        [ADMIN] Export a specific alert rule in provisioning format.
+        [WRITE] Export a specific alert rule in provisioning format.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -88,7 +88,7 @@ def register_admin_tools(
     @mcp.tool()
     async def export_all_alert_rules(connection_name: str) -> str:
         """
-        [ADMIN] Export all alert rules in provisioning format.
+        [WRITE] Export all alert rules in provisioning format.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -103,7 +103,7 @@ def register_admin_tools(
     @mcp.tool()
     async def get_rule_group(connection_name: str, folder_uid: str, group: str) -> str:
         """
-        [ADMIN] Get a specific alert rule group.
+        [WRITE] Get a specific alert rule group.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -122,7 +122,7 @@ def register_admin_tools(
         connection_name: str, folder_uid: str, group: str
     ) -> str:
         """
-        [ADMIN] Export a specific rule group in provisioning format.
+        [WRITE] Export a specific rule group in provisioning format.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -143,7 +143,7 @@ def register_admin_tools(
     @mcp.tool()
     async def list_contact_points(connection_name: str) -> str:
         """
-        [ADMIN] Get all contact points.
+        [WRITE] Get all contact points.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -162,7 +162,7 @@ def register_admin_tools(
     @mcp.tool()
     async def get_notification_policies(connection_name: str) -> str:
         """
-        [ADMIN] Get the notification policy tree.
+        [WRITE] Get the notification policy tree.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -181,7 +181,7 @@ def register_admin_tools(
     @mcp.tool()
     async def list_notification_templates(connection_name: str) -> str:
         """
-        [ADMIN] Get all notification templates.
+        [WRITE] Get all notification templates.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -196,7 +196,7 @@ def register_admin_tools(
     @mcp.tool()
     async def get_notification_template(connection_name: str, name: str) -> str:
         """
-        [ADMIN] Get a specific notification template by name.
+        [WRITE] Get a specific notification template by name.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -216,7 +216,7 @@ def register_admin_tools(
     @mcp.tool()
     async def list_mute_timings(connection_name: str) -> str:
         """
-        [ADMIN] Get all mute timings.
+        [WRITE] Get all mute timings.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -231,7 +231,7 @@ def register_admin_tools(
     @mcp.tool()
     async def get_mute_timing(connection_name: str, name: str) -> str:
         """
-        [ADMIN] Get a specific mute timing by name.
+        [WRITE] Get a specific mute timing by name.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -258,7 +258,7 @@ def register_admin_tools(
         overwrite: bool = False,
     ) -> str:
         """
-        [ADMIN] Create or update a dashboard from raw Grafana dashboard JSON.
+        [WRITE] Create or update a dashboard from raw Grafana dashboard JSON.
 
         If the dashboard UID already exists, the tool fetches the live dashboard
         first and reuses its current id/version. Unless you explicitly pass
@@ -298,7 +298,7 @@ def register_admin_tools(
         parent_uid: Optional[str] = None,
     ) -> str:
         """
-        [ADMIN] Create a new folder in Grafana.
+        [WRITE] Create a new folder in Grafana.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -320,7 +320,7 @@ def register_admin_tools(
     @mcp.tool()
     async def create_alert_rule(connection_name: str, rule: Dict[str, Any]) -> str:
         """
-        [ADMIN] Create a new alert rule.
+        [WRITE] Create a new alert rule.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -339,7 +339,7 @@ def register_admin_tools(
         connection_name: str, alert_uid: str, rule: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Update an existing alert rule.
+        [WRITE] Update an existing alert rule.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -356,7 +356,7 @@ def register_admin_tools(
     @mcp.tool()
     async def delete_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
-        [ADMIN] Delete an alert rule.
+        [WRITE] Delete an alert rule.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -377,7 +377,7 @@ def register_admin_tools(
         config: Dict[str, Any],
     ) -> str:
         """
-        [ADMIN] Update a rule group's configuration (interval, rules).
+        [WRITE] Update a rule group's configuration (interval, rules).
 
         Args:
             connection_name: Name of the Grafana connection
@@ -401,7 +401,7 @@ def register_admin_tools(
         connection_name: str, contact_point: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Create a new contact point.
+        [WRITE] Create a new contact point.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -419,7 +419,7 @@ def register_admin_tools(
         connection_name: str, uid: str, contact_point: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Update an existing contact point.
+        [WRITE] Update an existing contact point.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -436,7 +436,7 @@ def register_admin_tools(
     @mcp.tool()
     async def delete_contact_point(connection_name: str, uid: str) -> str:
         """
-        [ADMIN] Delete a contact point.
+        [WRITE] Delete a contact point.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -458,7 +458,7 @@ def register_admin_tools(
         connection_name: str, policies: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Set the notification policy tree.
+        [WRITE] Set the notification policy tree.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -474,7 +474,7 @@ def register_admin_tools(
     @mcp.tool()
     async def delete_notification_policies(connection_name: str) -> str:
         """
-        [ADMIN] Clear the notification policy tree (reset to defaults).
+        [WRITE] Clear the notification policy tree (reset to defaults).
 
         Args:
             connection_name: Name of the Grafana connection
@@ -495,7 +495,7 @@ def register_admin_tools(
         connection_name: str, mute_timing: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Create a new mute timing.
+        [WRITE] Create a new mute timing.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -513,7 +513,7 @@ def register_admin_tools(
         connection_name: str, name: str, mute_timing: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Update an existing mute timing.
+        [WRITE] Update an existing mute timing.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -530,7 +530,7 @@ def register_admin_tools(
     @mcp.tool()
     async def delete_mute_timing(connection_name: str, name: str) -> str:
         """
-        [ADMIN] Delete a mute timing.
+        [WRITE] Delete a mute timing.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -552,7 +552,7 @@ def register_admin_tools(
         connection_name: str, name: str, template: Dict[str, Any]
     ) -> str:
         """
-        [ADMIN] Create or update a notification template.
+        [WRITE] Create or update a notification template.
 
         Args:
             connection_name: Name of the Grafana connection
@@ -569,7 +569,7 @@ def register_admin_tools(
     @mcp.tool()
     async def delete_notification_template(connection_name: str, name: str) -> str:
         """
-        [ADMIN] Delete a notification template.
+        [WRITE] Delete a notification template.
 
         Args:
             connection_name: Name of the Grafana connection

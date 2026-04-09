@@ -7,6 +7,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-09
+
+### Added
+
+- Added `mcp-grafana-write` as a separate public command for write-capable Grafana operations while keeping `mcp-read-only-grafana` as the default read-only entrypoint.
+
+### Changed
+
+- This release changes the public CLI flow for write-capable usage.
+- Removed the `--allow-writes` and legacy `--allow-admin` flags in favor of command-based mode selection.
+- Reworded package metadata and user docs around a read-only default plus a separate write-capable command from the same package.
+
 ## [0.1.6] - 2026-04-09
 
 ### Added

@@ -197,7 +197,16 @@ def test_main_rejects_write_sample_config_with_subcommand(monkeypatch):
         server.main()
 
 
-def test_main_dispatches_validate_config_subcommand(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    "root_command",
+    [
+        "mcp-read-only-grafana",
+        "mcp-grafana-write",
+    ],
+)
+def test_main_dispatches_validate_config_subcommand(
+    monkeypatch, tmp_path, root_command
+):
     """Root CLI should dispatch validate-config and forward shared runtime args."""
     import sys
 
@@ -213,7 +222,7 @@ def test_main_dispatches_validate_config_subcommand(monkeypatch, tmp_path):
         sys,
         "argv",
         [
-            "mcp-read-only-grafana",
+            root_command,
             "--config-dir",
             str(tmp_path / "config"),
             "--state-dir",
@@ -228,7 +237,7 @@ def test_main_dispatches_validate_config_subcommand(monkeypatch, tmp_path):
     server.main()
 
     assert captured["argv"] == [
-        "mcp-read-only-grafana validate-config",
+        f"{root_command} validate-config",
         "--config-dir",
         str(tmp_path / "config"),
         "--state-dir",
@@ -273,8 +282,9 @@ def test_main_dispatches_test_connection_subcommand_args(monkeypatch, tmp_path):
     ]
 
 
-def test_main_rejects_allow_writes_with_subcommand(monkeypatch):
-    """Server-only flags should not be accepted together with management commands."""
+@pytest.mark.parametrize("removed_flag", ["--allow-writes", "--allow-admin"])
+def test_main_rejects_removed_write_flags(monkeypatch, removed_flag):
+    """Removed write flags should fail fast."""
     import sys
 
     from mcp_read_only_grafana import server
@@ -284,8 +294,7 @@ def test_main_rejects_allow_writes_with_subcommand(monkeypatch):
         "argv",
         [
             "mcp-read-only-grafana",
-            "--allow-writes",
-            "validate-config",
+            removed_flag,
         ],
     )
 
@@ -321,17 +330,23 @@ def test_main_restores_sys_argv_after_subcommand_error(monkeypatch):
     assert sys.argv == original_argv
 
 
-def test_main_passes_allow_writes_to_server(monkeypatch, tmp_path):
-    """The CLI should pass through the write-mode flag when constructing the server."""
+def test_main_uses_read_only_mode_for_default_command(monkeypatch, tmp_path):
+    """The default command should construct the server without write endpoints."""
     import sys
 
     from mcp_read_only_grafana import server
 
     captured: dict[str, object] = {}
 
-    def fake_init(self, runtime_paths, allow_writes=False):
+    def fake_init(
+        self,
+        runtime_paths,
+        allow_writes=False,
+        server_name=server.READ_ONLY_COMMAND,
+    ):
         captured["runtime_paths"] = runtime_paths
         captured["allow_writes"] = allow_writes
+        captured["server_name"] = server_name
 
     async def fake_cleanup(self):
         return None
@@ -347,7 +362,6 @@ def test_main_passes_allow_writes_to_server(monkeypatch, tmp_path):
             str(tmp_path / "state"),
             "--cache-dir",
             str(tmp_path / "cache"),
-            "--allow-writes",
         ],
     )
     monkeypatch.setattr(server.ReadOnlyGrafanaServer, "__init__", fake_init)
@@ -356,20 +370,27 @@ def test_main_passes_allow_writes_to_server(monkeypatch, tmp_path):
 
     server.main()
 
-    assert captured["allow_writes"] is True
+    assert captured["allow_writes"] is False
+    assert captured["server_name"] == "mcp-read-only-grafana"
 
 
-def test_main_accepts_legacy_allow_admin_alias(monkeypatch, tmp_path):
-    """The legacy allow-admin flag should still map to write mode."""
+def test_main_uses_write_mode_for_write_command(monkeypatch, tmp_path):
+    """The write-capable command should enable write endpoints automatically."""
     import sys
 
     from mcp_read_only_grafana import server
 
     captured: dict[str, object] = {}
 
-    def fake_init(self, runtime_paths, allow_writes=False):
+    def fake_init(
+        self,
+        runtime_paths,
+        allow_writes=False,
+        server_name=server.READ_ONLY_COMMAND,
+    ):
         captured["runtime_paths"] = runtime_paths
         captured["allow_writes"] = allow_writes
+        captured["server_name"] = server_name
 
     async def fake_cleanup(self):
         return None
@@ -378,10 +399,9 @@ def test_main_accepts_legacy_allow_admin_alias(monkeypatch, tmp_path):
         sys,
         "argv",
         [
-            "mcp-read-only-grafana",
+            "mcp-grafana-write",
             "--config-dir",
             str(tmp_path / "config"),
-            "--allow-admin",
         ],
     )
     monkeypatch.setattr(server.ReadOnlyGrafanaServer, "__init__", fake_init)
@@ -391,3 +411,4 @@ def test_main_accepts_legacy_allow_admin_alias(monkeypatch, tmp_path):
     server.main()
 
     assert captured["allow_writes"] is True
+    assert captured["server_name"] == "mcp-grafana-write"

@@ -11,9 +11,9 @@ install:
 run:
     @uv run mcp-read-only-grafana
 
-# Run the server with admin endpoints enabled
-run-admin:
-    @uv run mcp-read-only-grafana --allow-admin
+# Run the separate write-capable server command
+run-write:
+    @uv run mcp-grafana-write
 
 # Validate configuration file
 validate:

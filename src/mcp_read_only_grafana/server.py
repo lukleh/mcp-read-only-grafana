@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-MCP Read-Only Grafana Server
-Provides secure read-only access to Grafana instances via MCP protocol.
-"""
+"""CLI bootstrap for the Grafana MCP server package."""
 
 import argparse
 import asyncio
@@ -31,6 +28,8 @@ from .tools import validate_config as validate_config_command
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+READ_ONLY_COMMAND = "mcp-read-only-grafana"
+WRITE_COMMAND = "mcp-grafana-write"
 SAMPLE_CONNECTIONS_SCHEMA_JSON = (
     files("mcp_read_only_grafana")
     .joinpath("connections.schema.json")
@@ -103,13 +102,19 @@ SUBCOMMAND_HANDLERS: dict[str, Callable[[], None]] = {
 class ReadOnlyGrafanaServer:
     """MCP Read-Only Grafana Server using FastMCP."""
 
-    def __init__(self, runtime_paths: RuntimePaths, allow_writes: bool = False):
+    def __init__(
+        self,
+        runtime_paths: RuntimePaths,
+        allow_writes: bool = False,
+        server_name: str = READ_ONLY_COMMAND,
+    ):
         self.runtime_paths = runtime_paths
         self.allow_writes = allow_writes
+        self.server_name = server_name
         self.connections: Dict[str, GrafanaConnection] = {}
         self.connectors: Dict[str, GrafanaConnector] = {}
 
-        self.mcp = FastMCP("mcp-read-only-grafana")
+        self.mcp = FastMCP(server_name)
 
         self._load_connections()
         self._register_tools()
@@ -150,10 +155,10 @@ class ReadOnlyGrafanaServer:
         register_user_tools(self.mcp, self.connectors)
 
         if self.allow_writes:
-            logger.info("Write endpoints enabled (--allow-writes)")
+            logger.info("Write endpoints enabled for %s", self.server_name)
             register_admin_tools(self.mcp, self.connectors)
         else:
-            logger.info("Write endpoints disabled (use --allow-writes to enable)")
+            logger.info("Write endpoints disabled for %s", self.server_name)
 
     async def cleanup(self) -> None:
         for connector in self.connectors.values():
@@ -190,12 +195,25 @@ def write_sample_config(
     return config_path
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
+def _resolve_command_name(argv0: str | None = None) -> str:
+    """Normalize the invoking command name to a supported public entrypoint."""
+    candidate = Path(argv0 or (sys.argv[0] if sys.argv else "")).name
+    if candidate == WRITE_COMMAND:
+        return WRITE_COMMAND
+    return READ_ONLY_COMMAND
+
+
+def _build_cli_description(command_name: str) -> str:
+    """Return a short description for the active public command."""
+    if command_name == WRITE_COMMAND:
+        return "MCP Grafana Write Server - Write-capable access to Grafana instances"
+    return "MCP Read-Only Grafana Server - Read-only access to Grafana instances"
+
+
+def build_arg_parser(command_name: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mcp-read-only-grafana",
-        description=(
-            "MCP Read-Only Grafana Server - Secure read-only access to Grafana instances"
-        ),
+        prog=command_name,
+        description=_build_cli_description(command_name),
     )
     parser.add_argument(
         "--config-dir",
@@ -225,13 +243,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Replace connections.yaml when used with --write-sample-config",
     )
     parser.add_argument(
-        "--allow-writes",
-        "--allow-admin",
-        dest="allow_writes",
-        action="store_true",
-        help="Enable write-capable endpoints. Required for dashboard saves and other Grafana mutations.",
-    )
-    parser.add_argument(
         "command",
         nargs="?",
         choices=sorted(SUBCOMMAND_HANDLERS),
@@ -258,11 +269,11 @@ def _forward_shared_runtime_args(args: argparse.Namespace) -> list[str]:
     return forwarded
 
 
-def _dispatch_subcommand(args: argparse.Namespace) -> None:
+def _dispatch_subcommand(args: argparse.Namespace, command_name: str) -> None:
     """Execute a management subcommand through the public root CLI."""
     forwarded_args = _forward_shared_runtime_args(args)
     command_argv = [
-        f"mcp-read-only-grafana {args.command}",
+        f"{command_name} {args.command}",
         *forwarded_args,
         *args.command_args,
     ]
@@ -275,8 +286,9 @@ def _dispatch_subcommand(args: argparse.Namespace) -> None:
         sys.argv = original_argv
 
 
-def main() -> None:
-    parser = build_arg_parser()
+def _main(command_name: str | None = None) -> None:
+    command_name = _resolve_command_name(command_name)
+    parser = build_arg_parser(command_name)
     args = parser.parse_args()
 
     if args.command and (args.write_sample_config or args.overwrite):
@@ -284,11 +296,8 @@ def main() -> None:
             "--write-sample-config and --overwrite can only be used without a subcommand"
         )
 
-    if args.command and args.allow_writes:
-        parser.error("--allow-writes can only be used when starting the MCP server")
-
     if args.command:
-        _dispatch_subcommand(args)
+        _dispatch_subcommand(args, command_name)
         return
 
     if args.overwrite and not args.write_sample_config:
@@ -315,7 +324,8 @@ def main() -> None:
 
     server = ReadOnlyGrafanaServer(
         runtime_paths=runtime_paths,
-        allow_writes=args.allow_writes,
+        allow_writes=command_name == WRITE_COMMAND,
+        server_name=command_name,
     )
     exit_code = 0
 
@@ -334,6 +344,21 @@ def main() -> None:
 
     if exit_code:
         sys.exit(exit_code)
+
+
+def main() -> None:
+    """Auto-detect the invoking entrypoint and launch the matching mode."""
+    _main()
+
+
+def main_read_only() -> None:
+    """Launch the read-only public command."""
+    _main(READ_ONLY_COMMAND)
+
+
+def main_write() -> None:
+    """Launch the write-capable public command."""
+    _main(WRITE_COMMAND)
 
 
 if __name__ == "__main__":

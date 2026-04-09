@@ -1,7 +1,7 @@
 [project]
 name = "mcp-read-only-grafana"
-version = "0.1.6"
-description = "MCP server for read-only access to Grafana instances"
+version = "0.2.0"
+description = "MCP server for Grafana with a read-only default and a separate write-capable command"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["grafana", "mcp", "mcp-server", "read-only", "observability"]
@@ -47,7 +47,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-mcp-read-only-grafana = "mcp_read_only_grafana.server:main"
+mcp-read-only-grafana = "mcp_read_only_grafana.server:main_read_only"
+mcp-grafana-write = "mcp_read_only_grafana.server:main_write"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_read_only_grafana"]
