@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml/badge.svg)](https://github.com/lukleh/mcp-read-only-grafana/actions/workflows/test.yml)
 
-A secure MCP (Model Context Protocol) server that provides access to Grafana instances using Grafana API keys or service-account tokens, with deprecated session-cookie fallback support.
+A secure MCP (Model Context Protocol) server for Grafana with a read-only default and a separate `mcp-grafana-write` command for write-capable workflows.
 
 > Default layout:
 > - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
@@ -14,8 +14,8 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 ## Features
 
-- **Read-only by default** - All operations are read-only unless `--allow-writes` is enabled
-- **Optional write mode** - Enable write operations (dashboard save, alerts, folders, and related write APIs) with `--allow-writes` flag
+- **Read-only by default** - `mcp-read-only-grafana` exposes the safe default surface
+- **Separate write command** - `mcp-grafana-write` enables dashboard saves, alerting writes, folders, and related mutations from the same package
 - **API key first authentication** - Prefers Grafana API keys or service-account tokens for stable machine access
 - **Deprecated session-cookie fallback** - Still supports Grafana session cookies, including automatic capture of rotated cookies in `session_tokens.json`
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
@@ -41,11 +41,15 @@ uvx mcp-read-only-grafana@latest --write-sample-config
 # Or install it once and reuse the command directly
 uv tool install mcp-read-only-grafana
 mcp-read-only-grafana --write-sample-config
+
+# The same install also provides the separate write-capable command
+mcp-grafana-write --print-paths
 ```
 
 When using `uvx`, prefer `mcp-read-only-grafana@latest` in user-facing docs and
 MCP client configs. This avoids reusing a stale cached tool environment after a
-new release is published.
+new release is published. For the separate write-capable command, use
+`uvx --from mcp-read-only-grafana@latest mcp-grafana-write`.
 
 The command above writes a starter config and matching schema to:
 
@@ -156,12 +160,15 @@ codex mcp add mcp-read-only-grafana \
 If you absolutely need the deprecated session-cookie fallback, swap
 `GRAFANA_API_KEY_*` for `GRAFANA_SESSION_*` in the MCP client config.
 
-If you want the write-capable endpoints, append `--allow-writes` to
-the launched command:
+If you want the write-capable endpoints, launch the separate write command from
+the same package:
 
 ```bash
-uvx mcp-read-only-grafana@latest --allow-writes
+uvx --from mcp-read-only-grafana@latest mcp-grafana-write
 ```
+
+For a persistent install created with `uv tool install mcp-read-only-grafana`,
+run `mcp-grafana-write` directly.
 
 ### 6. Restart and Test
 
@@ -184,8 +191,8 @@ uvx mcp-read-only-grafana@latest --write-sample-config --overwrite
 # Run the server with the default home-directory config
 uvx mcp-read-only-grafana@latest
 
-# Enable write-capable endpoints
-uvx mcp-read-only-grafana@latest --allow-writes
+# Run the separate write-capable command from the same package
+uvx --from mcp-read-only-grafana@latest mcp-grafana-write
 
 # Point the server at a different config root
 uvx mcp-read-only-grafana@latest --config-dir /path/to/config-dir
@@ -210,6 +217,7 @@ cd mcp-read-only-grafana
 uv sync --extra dev
 uv run pytest -q
 uv run mcp-read-only-grafana --print-paths
+uv run mcp-grafana-write --print-paths
 ```
 
 The checked-in sample file remains available at [connections.yaml.sample](connections.yaml.sample) for documentation and review, but package users should prefer `--write-sample-config`.
@@ -484,9 +492,12 @@ List all teams in the organization.
 
 ---
 
-## Write Tools (requires `--allow-writes`)
+## Write Tools (requires `mcp-grafana-write`)
 
-The following tools are only available when running the server with `--allow-writes`. They enable write operations for dashboards, folders, and Grafana alerting resources. The required Grafana permission scope depends on the specific endpoint.
+The following tools are only available when running the separate
+`mcp-grafana-write` command. They enable write operations for dashboards,
+folders, and Grafana alerting resources. The required Grafana permission scope
+depends on the specific endpoint.
 
 > **Warning:** These tools can create, modify, and delete Grafana resources. Use with caution.
 
@@ -685,28 +696,28 @@ Each connection in `connections.yaml` supports:
 
 The server implements a **secure-by-default model**:
 
-1. **Read-only by default** - Only GET requests are performed without `--allow-writes`
-2. **Opt-in write mode** - Write operations require explicit `--allow-writes` flag
+1. **Read-only by default** - `mcp-read-only-grafana` only performs safe read operations
+2. **Separate write command** - `mcp-grafana-write` exposes write-capable tools when you intentionally opt into that command
 3. **Timeout protection** - Configurable request timeouts (default: 30s)
 4. **SSL verification** - Enabled by default for all connections
 5. **Credential security** - Keep API keys or fallback session tokens in local config, env, or MCP-managed state only
 
 ### Default Mode (Read-Only)
 
-Without `--allow-writes`, the server only performs HTTP GET requests:
+When launched via `mcp-read-only-grafana`, the server only performs HTTP GET requests:
 - **GET** - Read operations only (dashboards, datasources, alerts, users, teams, etc.)
 - **POST** - Limited to read-only query execution (`/api/ds/query` for Explore)
 
 It is **impossible to modify, create, or delete any Grafana resources** in default mode.
 
-### Write Mode (`--allow-writes`)
+### Write Mode (`mcp-grafana-write`)
 
-When running with `--allow-writes`, additional write operations are enabled:
+When running via `mcp-grafana-write`, additional write operations are enabled:
 - **POST** - Save dashboards, create folders, create new alert rules, contact points, mute timings
 - **PUT** - Update existing alert rules, contact points, notification policies, mute timings, templates
 - **DELETE** - Remove alert rules, contact points, notification policies, mute timings, templates
 
-> **Warning:** Write mode enables destructive operations. Only enable when you need write-capable Grafana access. The API key or deprecated session fallback must have the Grafana permissions required by the endpoints you plan to call.
+> **Warning:** The write command enables destructive operations. Only use it when you need write-capable Grafana access. The API key or deprecated session fallback must have the Grafana permissions required by the endpoints you plan to call.
 
 ### Additional Security Considerations
 

@@ -112,7 +112,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="mcp-read-only-grafana test-connection",
+        prog=sys.argv[0] if sys.argv else "mcp-read-only-grafana test-connection",
         description="Test MCP Grafana Server connections",
     )
     parser.add_argument(

@@ -9,7 +9,7 @@ Modules:
     datasource_tools: Datasource queries (Prometheus, Loki)
     alert_tools: Alert rules and state visibility
     user_tools: Users, teams, annotations
-    admin_tools: Write-capable operations (requires --allow-writes)
+    admin_tools: Write-capable operations exposed by mcp-grafana-write
 """
 
 from .core_tools import register_core_tools

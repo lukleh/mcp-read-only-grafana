@@ -53,6 +53,7 @@ Optional manual checks when you have Grafana credentials configured:
 
 ```bash
 uv run mcp-read-only-grafana --print-paths
+uv run mcp-grafana-write --print-paths
 uv run mcp-read-only-grafana validate-config
 uv run mcp-read-only-grafana test-connection
 ```
@@ -77,5 +78,5 @@ git push origin vX.Y.Z
 ## Notes
 
 - The packaged smoke tests should keep covering schema bootstrap plus the root subcommands
-- Keep `--allow-admin` behavior explicit in release notes whenever admin-only surfaces change
+- Keep the read-only versus write-command split explicit in release notes whenever write-capable surfaces change
 - If auth expectations change, keep the README and generated sample config aligned with the release

@@ -8,12 +8,12 @@ To run these tests:
     pytest tests/test_integration_all_endpoints.py -v -m integration
 
 To run with write-capable endpoints:
-    RUN_ADMIN_TESTS=1 pytest tests/test_integration_all_endpoints.py -v -m integration
+    RUN_WRITE_TESTS=1 pytest tests/test_integration_all_endpoints.py -v -m integration
 
 Requirements:
     - connections.yaml must have a 'grafana-ha' connection configured
     - GRAFANA_SESSION_GRAFANA_HA must be set in the environment
-    - (Optional) Set RUN_ADMIN_TESTS=1 to exercise write-capable endpoints
+    - (Optional) Set RUN_WRITE_TESTS=1 to exercise write-capable endpoints
 
 See CLAUDE.md for detailed test configuration and admin test documentation.
 """
@@ -24,10 +24,13 @@ import pytest
 from mcp_read_only_grafana.config import ConfigParser
 from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 
-RUN_ADMIN_TESTS = os.getenv("RUN_ADMIN_TESTS", "").lower() in {"1", "true", "yes", "on"}
+RUN_WRITE_TESTS = os.getenv(
+    "RUN_WRITE_TESTS",
+    os.getenv("RUN_ADMIN_TESTS", ""),
+).lower() in {"1", "true", "yes", "on"}
 admin_only = pytest.mark.skipif(
-    not RUN_ADMIN_TESTS,
-    reason="Admin tests disabled. Set RUN_ADMIN_TESTS=1 (or true/yes/on) to enable.",
+    not RUN_WRITE_TESTS,
+    reason="Write-capable tests disabled. Set RUN_WRITE_TESTS=1 (or true/yes/on) to enable.",
 )
 
 
