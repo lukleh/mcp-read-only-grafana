@@ -7,6 +7,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-04-09
+
+### Added
+
+- Added `save_dashboard` as a write-capable MCP tool for creating or updating Grafana dashboards from raw dashboard JSON.
+- Dashboard saves now sync against the live Grafana dashboard revision by UID, reusing the current dashboard `id` and `version` while preserving the existing folder unless explicitly overridden.
+
+### Changed
+
+- Renamed the public write-enablement flag from `--allow-admin` to `--allow-writes`.
+- Kept `--allow-admin` as a legacy alias for compatibility while shifting docs and release smoke tests to `--allow-writes`.
+
 ## [0.1.5] - 2026-04-03
 
 ### Added

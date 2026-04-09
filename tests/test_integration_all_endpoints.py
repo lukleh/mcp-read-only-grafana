@@ -7,13 +7,13 @@ current environment and configuration from connections.yaml.
 To run these tests:
     pytest tests/test_integration_all_endpoints.py -v -m integration
 
-To run with admin-only endpoints:
+To run with write-capable endpoints:
     RUN_ADMIN_TESTS=1 pytest tests/test_integration_all_endpoints.py -v -m integration
 
 Requirements:
     - connections.yaml must have a 'grafana-ha' connection configured
     - GRAFANA_SESSION_GRAFANA_HA must be set in the environment
-    - (Optional) Set RUN_ADMIN_TESTS=1 to exercise admin-only endpoints
+    - (Optional) Set RUN_ADMIN_TESTS=1 to exercise write-capable endpoints
 
 See CLAUDE.md for detailed test configuration and admin test documentation.
 """

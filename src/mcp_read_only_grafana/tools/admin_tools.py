@@ -1,7 +1,7 @@
-"""Admin-only MCP tools (Provisioning API).
+"""Write-capable MCP tools.
 
-This module provides tools that require Grafana admin permissions.
-These tools are only registered when --allow-admin flag is provided.
+This module provides tools that mutate Grafana resources.
+These tools are only registered when --allow-writes flag is provided.
 
 Includes:
 - Provisioned alert rule management
@@ -25,10 +25,9 @@ def register_admin_tools(
     mcp: FastMCP,
     connectors: Dict[str, GrafanaConnector],
 ) -> None:
-    """Register admin-only MCP tools (Provisioning API).
+    """Register write-capable MCP tools.
 
-    These tools require Grafana admin permissions and are only registered
-    when --allow-admin flag is provided.
+    These tools are only registered when --allow-writes flag is provided.
 
     Args:
         mcp: FastMCP server instance
@@ -244,6 +243,48 @@ def register_admin_tools(
         connector = get_connector(connectors, connection_name)
         mute_timing = await connector.get_mute_timing(name)
         return json.dumps(mute_timing, indent=2)
+
+    # =========================================================================
+    # Write Operations - Dashboards
+    # =========================================================================
+
+    @mcp.tool()
+    async def save_dashboard(
+        connection_name: str,
+        dashboard: Dict[str, Any],
+        folder_uid: Optional[str] = None,
+        folder_id: Optional[int] = None,
+        message: Optional[str] = None,
+        overwrite: bool = False,
+    ) -> str:
+        """
+        [ADMIN] Create or update a dashboard from raw Grafana dashboard JSON.
+
+        If the dashboard UID already exists, the tool fetches the live dashboard
+        first and reuses its current id/version. Unless you explicitly pass
+        `folder_uid` or `folder_id`, it also preserves the dashboard's current
+        folder instead of moving it to the root level.
+
+        Args:
+            connection_name: Name of the Grafana connection
+            dashboard: Raw Grafana dashboard model JSON (for example a repo dashboard file)
+            folder_uid: Optional folder UID override for the save target
+            folder_id: Optional folder ID override for the save target
+            message: Optional dashboard version history message
+            overwrite: Set true to overwrite an existing dashboard with the same UID
+
+        Returns:
+            JSON string with Grafana's save-dashboard response (id, uid, url, version, status).
+        """
+        connector = get_connector(connectors, connection_name)
+        result = await connector.save_dashboard(
+            dashboard=dashboard,
+            folder_uid=folder_uid,
+            folder_id=folder_id,
+            message=message,
+            overwrite=overwrite,
+        )
+        return json.dumps(result, indent=2)
 
     # =========================================================================
     # Write Operations - Folders

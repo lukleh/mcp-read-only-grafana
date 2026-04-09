@@ -14,8 +14,8 @@ A secure MCP (Model Context Protocol) server that provides access to Grafana ins
 
 ## Features
 
-- **Read-only by default** - All operations are read-only unless `--allow-admin` is enabled
-- **Optional admin mode** - Enable write operations (create/update/delete alerts) with `--allow-admin` flag
+- **Read-only by default** - All operations are read-only unless `--allow-writes` is enabled
+- **Optional write mode** - Enable write operations (dashboard save, alerts, folders, and related write APIs) with `--allow-writes` flag
 - **API key first authentication** - Prefers Grafana API keys or service-account tokens for stable machine access
 - **Deprecated session-cookie fallback** - Still supports Grafana session cookies, including automatic capture of rotated cookies in `session_tokens.json`
 - **Hierarchical dashboard navigation** - Handle large dashboards efficiently with lightweight metadata queries and per-panel detail fetching
@@ -156,11 +156,11 @@ codex mcp add mcp-read-only-grafana \
 If you absolutely need the deprecated session-cookie fallback, swap
 `GRAFANA_API_KEY_*` for `GRAFANA_SESSION_*` in the MCP client config.
 
-If you intentionally want the admin-only endpoints, append `--allow-admin` to
+If you want the write-capable endpoints, append `--allow-writes` to
 the launched command:
 
 ```bash
-uvx mcp-read-only-grafana@latest --allow-admin
+uvx mcp-read-only-grafana@latest --allow-writes
 ```
 
 ### 6. Restart and Test
@@ -184,8 +184,8 @@ uvx mcp-read-only-grafana@latest --write-sample-config --overwrite
 # Run the server with the default home-directory config
 uvx mcp-read-only-grafana@latest
 
-# Enable admin-only endpoints
-uvx mcp-read-only-grafana@latest --allow-admin
+# Enable write-capable endpoints
+uvx mcp-read-only-grafana@latest --allow-writes
 
 # Point the server at a different config root
 uvx mcp-read-only-grafana@latest --config-dir /path/to/config-dir
@@ -484,11 +484,41 @@ List all teams in the organization.
 
 ---
 
-## Admin Tools (requires `--allow-admin`)
+## Write Tools (requires `--allow-writes`)
 
-The following tools are only available when running the server with `--allow-admin`. They require Grafana admin permissions and enable write operations for alert management.
+The following tools are only available when running the server with `--allow-writes`. They enable write operations for dashboards, folders, and Grafana alerting resources. The required Grafana permission scope depends on the specific endpoint.
 
 > **Warning:** These tools can create, modify, and delete Grafana resources. Use with caution.
+
+### Dashboards
+
+#### `save_dashboard`
+Create or update a dashboard using raw Grafana dashboard JSON.
+
+When the dashboard UID already exists, the server first fetches the live dashboard and reuses its current `id` and `version`. If you do not pass `folder_uid` or `folder_id`, it also preserves the current folder so updates do not accidentally move the dashboard to the root level.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `dashboard` (required): Raw Grafana dashboard model JSON object
+- `folder_uid` (optional): Folder UID override for the save target
+- `folder_id` (optional): Folder ID override for the save target
+- `message` (optional): Dashboard version history message
+- `overwrite` (optional): Set to `true` to overwrite an existing dashboard with the same UID
+
+**Returns:** Grafana's save-dashboard response with `id`, `uid`, `url`, `status`, and `version`
+
+### Folders
+
+#### `create_folder`
+Create a new folder in Grafana.
+
+**Parameters:**
+- `connection_name` (required): Name of the Grafana connection
+- `title` (required): Folder title
+- `uid` (optional): Explicit folder UID
+- `parent_uid` (optional): Parent folder UID for nested folders
+
+**Returns:** Created folder details including UID and URL
 
 ### Alert Rules
 
@@ -655,28 +685,28 @@ Each connection in `connections.yaml` supports:
 
 The server implements a **secure-by-default model**:
 
-1. **Read-only by default** - Only GET requests are performed without `--allow-admin`
-2. **Opt-in admin mode** - Write operations require explicit `--allow-admin` flag
+1. **Read-only by default** - Only GET requests are performed without `--allow-writes`
+2. **Opt-in write mode** - Write operations require explicit `--allow-writes` flag
 3. **Timeout protection** - Configurable request timeouts (default: 30s)
 4. **SSL verification** - Enabled by default for all connections
 5. **Credential security** - Keep API keys or fallback session tokens in local config, env, or MCP-managed state only
 
 ### Default Mode (Read-Only)
 
-Without `--allow-admin`, the server only performs HTTP GET requests:
+Without `--allow-writes`, the server only performs HTTP GET requests:
 - **GET** - Read operations only (dashboards, datasources, alerts, users, teams, etc.)
 - **POST** - Limited to read-only query execution (`/api/ds/query` for Explore)
 
 It is **impossible to modify, create, or delete any Grafana resources** in default mode.
 
-### Admin Mode (`--allow-admin`)
+### Write Mode (`--allow-writes`)
 
-When running with `--allow-admin`, additional write operations are enabled:
-- **POST** - Create new alert rules, contact points, mute timings
+When running with `--allow-writes`, additional write operations are enabled:
+- **POST** - Save dashboards, create folders, create new alert rules, contact points, mute timings
 - **PUT** - Update existing alert rules, contact points, notification policies, mute timings, templates
 - **DELETE** - Remove alert rules, contact points, notification policies, mute timings, templates
 
-> **Warning:** Admin mode enables destructive operations. Only enable when you need to manage Grafana alerting resources. The API key or deprecated session fallback must have Grafana admin permissions.
+> **Warning:** Write mode enables destructive operations. Only enable when you need write-capable Grafana access. The API key or deprecated session fallback must have the Grafana permissions required by the endpoints you plan to call.
 
 ### Additional Security Considerations
 

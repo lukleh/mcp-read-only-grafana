@@ -382,6 +382,75 @@ class GrafanaConnector:
             "updated_by": meta.get("updatedBy"),
         }
 
+    async def save_dashboard(
+        self,
+        dashboard: Dict[str, Any],
+        folder_uid: str | None = None,
+        folder_id: int | None = None,
+        message: str | None = None,
+        overwrite: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Create or update a dashboard via Grafana's dashboard save API.
+
+        When the dashboard UID already exists, this method reuses the live
+        dashboard id/version and preserves the current folder placement unless
+        the caller explicitly overrides it. That avoids the two most common API
+        footguns: version-mismatch errors and unintentionally moving dashboards
+        to the root folder during updates.
+
+        Args:
+            dashboard: Raw Grafana dashboard model JSON
+            folder_uid: Optional folder UID to save into
+            folder_id: Optional folder ID to save into (ignored when folder_uid is set)
+            message: Optional dashboard version history message
+            overwrite: Whether to overwrite an existing dashboard with the same UID
+
+        Returns:
+            Grafana save-dashboard response
+        """
+        payload_dashboard = dict(dashboard)
+        dashboard_uid = payload_dashboard.get("uid")
+
+        if isinstance(dashboard_uid, str) and dashboard_uid:
+            try:
+                existing = await self._get(f"/dashboards/uid/{dashboard_uid}")
+            except GrafanaAPIError as exc:
+                if exc.status_code != 404:
+                    raise
+            else:
+                live_dashboard = existing.get("dashboard", {})
+                live_meta = existing.get("meta", {})
+
+                if live_dashboard.get("id") is not None:
+                    payload_dashboard["id"] = live_dashboard.get("id")
+                if live_dashboard.get("uid"):
+                    payload_dashboard["uid"] = live_dashboard.get("uid")
+                if live_dashboard.get("version") is not None:
+                    payload_dashboard["version"] = live_dashboard.get("version")
+
+                if folder_uid is None and folder_id is None:
+                    live_folder_uid = live_meta.get("folderUid")
+                    if live_folder_uid:
+                        folder_uid = live_folder_uid
+                    else:
+                        live_folder_id = live_meta.get("folderId")
+                        if live_folder_id is not None:
+                            folder_id = live_folder_id
+
+        payload: Dict[str, Any] = {
+            "dashboard": payload_dashboard,
+            "overwrite": overwrite,
+        }
+        if folder_id is not None:
+            payload["folderId"] = folder_id
+        if folder_uid is not None:
+            payload["folderUid"] = folder_uid
+        if message:
+            payload["message"] = message
+
+        return await self._post("/dashboards/db", json_payload=payload)
+
     async def list_folders(self) -> list[Dict[str, Any]]:
         """List all folders in Grafana"""
         folders = await self._get("/folders")
