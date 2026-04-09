@@ -5,11 +5,11 @@ that are called by the main server to register all MCP tools.
 
 Modules:
     core_tools: Connection management and health checks
-    dashboard_tools: Dashboard CRUD and navigation
+    dashboard_tools: Dashboard reads and navigation
     datasource_tools: Datasource queries (Prometheus, Loki)
     alert_tools: Alert rules and state visibility
     user_tools: Users, teams, annotations
-    admin_tools: Admin-only write operations (requires --allow-admin)
+    admin_tools: Write-capable operations (requires --allow-writes)
 """
 
 from .core_tools import register_core_tools

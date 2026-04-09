@@ -103,9 +103,9 @@ SUBCOMMAND_HANDLERS: dict[str, Callable[[], None]] = {
 class ReadOnlyGrafanaServer:
     """MCP Read-Only Grafana Server using FastMCP."""
 
-    def __init__(self, runtime_paths: RuntimePaths, allow_admin: bool = False):
+    def __init__(self, runtime_paths: RuntimePaths, allow_writes: bool = False):
         self.runtime_paths = runtime_paths
-        self.allow_admin = allow_admin
+        self.allow_writes = allow_writes
         self.connections: Dict[str, GrafanaConnection] = {}
         self.connectors: Dict[str, GrafanaConnector] = {}
 
@@ -149,11 +149,11 @@ class ReadOnlyGrafanaServer:
         register_alert_tools(self.mcp, self.connectors)
         register_user_tools(self.mcp, self.connectors)
 
-        if self.allow_admin:
-            logger.info("Admin endpoints enabled (--allow-admin)")
+        if self.allow_writes:
+            logger.info("Write endpoints enabled (--allow-writes)")
             register_admin_tools(self.mcp, self.connectors)
         else:
-            logger.info("Admin endpoints disabled (use --allow-admin to enable)")
+            logger.info("Write endpoints disabled (use --allow-writes to enable)")
 
     async def cleanup(self) -> None:
         for connector in self.connectors.values():
@@ -195,7 +195,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         prog="mcp-read-only-grafana",
         description=(
             "MCP Read-Only Grafana Server - Secure read-only access to Grafana instances"
-        )
+        ),
     )
     parser.add_argument(
         "--config-dir",
@@ -225,9 +225,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Replace connections.yaml when used with --write-sample-config",
     )
     parser.add_argument(
+        "--allow-writes",
         "--allow-admin",
+        dest="allow_writes",
         action="store_true",
-        help="Enable admin-only endpoints (Provisioning API). Requires Grafana admin permissions.",
+        help="Enable write-capable endpoints. Required for dashboard saves and other Grafana mutations.",
     )
     parser.add_argument(
         "command",
@@ -282,8 +284,8 @@ def main() -> None:
             "--write-sample-config and --overwrite can only be used without a subcommand"
         )
 
-    if args.command and args.allow_admin:
-        parser.error("--allow-admin can only be used when starting the MCP server")
+    if args.command and args.allow_writes:
+        parser.error("--allow-writes can only be used when starting the MCP server")
 
     if args.command:
         _dispatch_subcommand(args)
@@ -313,7 +315,7 @@ def main() -> None:
 
     server = ReadOnlyGrafanaServer(
         runtime_paths=runtime_paths,
-        allow_admin=args.allow_admin,
+        allow_writes=args.allow_writes,
     )
     exit_code = 0
 

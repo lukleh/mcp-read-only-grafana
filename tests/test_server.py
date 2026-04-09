@@ -273,7 +273,7 @@ def test_main_dispatches_test_connection_subcommand_args(monkeypatch, tmp_path):
     ]
 
 
-def test_main_rejects_allow_admin_with_subcommand(monkeypatch):
+def test_main_rejects_allow_writes_with_subcommand(monkeypatch):
     """Server-only flags should not be accepted together with management commands."""
     import sys
 
@@ -284,7 +284,7 @@ def test_main_rejects_allow_admin_with_subcommand(monkeypatch):
         "argv",
         [
             "mcp-read-only-grafana",
-            "--allow-admin",
+            "--allow-writes",
             "validate-config",
         ],
     )
@@ -321,17 +321,17 @@ def test_main_restores_sys_argv_after_subcommand_error(monkeypatch):
     assert sys.argv == original_argv
 
 
-def test_main_passes_allow_admin_to_server(monkeypatch, tmp_path):
-    """The CLI should pass through the admin-mode flag when constructing the server."""
+def test_main_passes_allow_writes_to_server(monkeypatch, tmp_path):
+    """The CLI should pass through the write-mode flag when constructing the server."""
     import sys
 
     from mcp_read_only_grafana import server
 
     captured: dict[str, object] = {}
 
-    def fake_init(self, runtime_paths, allow_admin=False):
+    def fake_init(self, runtime_paths, allow_writes=False):
         captured["runtime_paths"] = runtime_paths
-        captured["allow_admin"] = allow_admin
+        captured["allow_writes"] = allow_writes
 
     async def fake_cleanup(self):
         return None
@@ -347,6 +347,40 @@ def test_main_passes_allow_admin_to_server(monkeypatch, tmp_path):
             str(tmp_path / "state"),
             "--cache-dir",
             str(tmp_path / "cache"),
+            "--allow-writes",
+        ],
+    )
+    monkeypatch.setattr(server.ReadOnlyGrafanaServer, "__init__", fake_init)
+    monkeypatch.setattr(server.ReadOnlyGrafanaServer, "run", lambda self: None)
+    monkeypatch.setattr(server.ReadOnlyGrafanaServer, "cleanup", fake_cleanup)
+
+    server.main()
+
+    assert captured["allow_writes"] is True
+
+
+def test_main_accepts_legacy_allow_admin_alias(monkeypatch, tmp_path):
+    """The legacy allow-admin flag should still map to write mode."""
+    import sys
+
+    from mcp_read_only_grafana import server
+
+    captured: dict[str, object] = {}
+
+    def fake_init(self, runtime_paths, allow_writes=False):
+        captured["runtime_paths"] = runtime_paths
+        captured["allow_writes"] = allow_writes
+
+    async def fake_cleanup(self):
+        return None
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-read-only-grafana",
+            "--config-dir",
+            str(tmp_path / "config"),
             "--allow-admin",
         ],
     )
@@ -356,4 +390,4 @@ def test_main_passes_allow_admin_to_server(monkeypatch, tmp_path):
 
     server.main()
 
-    assert captured["allow_admin"] is True
+    assert captured["allow_writes"] is True
