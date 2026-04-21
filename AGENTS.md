@@ -23,5 +23,21 @@ Pytest uses `unit` and `integration` markers from `pyproject.toml`. Add or updat
 ## Commit & Pull Request Guidelines
 Follow the current history style with short imperative commit subjects and small focused diffs. Pull requests should explain whether the change affects the read-only command, the write command, or both, and should list the exact local commands you ran, including any integration coverage.
 
+## Runtime Config Location
+- The live runtime Grafana config file is:
+  `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+- The checked-in [`connections.yaml.sample`](connections.yaml.sample) file is
+  documentation/source material only.
+- `--write-sample-config` writes the sample into the resolved runtime config
+  directory.
+- `--config-dir /path/to/config-dir` changes the live config file location to:
+  `/path/to/config-dir/connections.yaml`
+
+When updating config-location documentation, keep these aligned:
+- [README.md](README.md)
+- [connections.yaml.sample](connections.yaml.sample)
+- [src/mcp_read_only_grafana/server.py](src/mcp_read_only_grafana/server.py)
+- [CLAUDE.md](CLAUDE.md)
+
 ## Security & Configuration Tips
 Prefer API keys or service-account tokens over the deprecated session-cookie fallback. Do not weaken the separation between the default read-only command and the write-capable command. Treat rotated session state in `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json` as sensitive local data.

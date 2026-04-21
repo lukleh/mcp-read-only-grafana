@@ -1,7 +1,10 @@
 # yaml-language-server: $schema=./connections.schema.json
 # MCP Read-Only Grafana Server - Connection Configuration Sample
 # Edit this file to configure your Grafana connections.
-# Default runtime location: ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
+# Live runtime location for the installed package:
+#   ~/.config/lukleh/mcp-read-only-grafana/connections.yaml
+# This checked-in sample file is only documentation/source material.
+# Use --write-sample-config to write it into the runtime config directory.
 # Prefer `api_key` for normal use.
 # `session_token` is deprecated and should only be used as a temporary fallback.
 

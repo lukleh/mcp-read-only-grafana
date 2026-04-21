@@ -9,7 +9,7 @@ from mcp_read_only_grafana.config import ConfigParser, GrafanaConnection
 def test_connection_name_validation():
     """Test connection name validation"""
     # Valid names
-    valid_names = ["prod", "prod_grafana", "grafana-ha", "grafana123"]
+    valid_names = ["prod", "prod_grafana", "grafana-prod", "grafana123"]
     for name in valid_names:
         conn = GrafanaConnection(
             connection_name=name,
@@ -32,7 +32,7 @@ def test_env_var_name_generation():
     test_cases = [
         ("production", "GRAFANA_SESSION_PRODUCTION"),
         ("prod-grafana", "GRAFANA_SESSION_PROD_GRAFANA"),
-        ("grafana-ha", "GRAFANA_SESSION_GRAFANA_HA"),
+        ("grafana-prod", "GRAFANA_SESSION_GRAFANA_PROD"),
         ("grafana_test", "GRAFANA_SESSION_GRAFANA_TEST"),
     ]
 

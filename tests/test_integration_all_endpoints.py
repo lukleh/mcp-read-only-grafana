@@ -11,8 +11,10 @@ To run with write-capable endpoints:
     RUN_WRITE_TESTS=1 pytest tests/test_integration_all_endpoints.py -v -m integration
 
 Requirements:
-    - connections.yaml must have a 'grafana-ha' connection configured
-    - GRAFANA_SESSION_GRAFANA_HA must be set in the environment
+    - local repo-root connections.yaml must have a 'grafana' connection configured
+      by default, or set GRAFANA_TEST_CONNECTION_NAME to override it
+    - the chosen connection must have session-based auth available, either via
+      session_token in connections.yaml or its matching GRAFANA_SESSION_* env var
     - (Optional) Set RUN_WRITE_TESTS=1 to exercise write-capable endpoints
 
 See CLAUDE.md for detailed test configuration and admin test documentation.
@@ -24,6 +26,7 @@ import pytest
 from mcp_read_only_grafana.config import ConfigParser
 from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 
+TEST_CONNECTION_NAME = os.getenv("GRAFANA_TEST_CONNECTION_NAME", "grafana")
 RUN_WRITE_TESTS = os.getenv(
     "RUN_WRITE_TESTS",
     os.getenv("RUN_ADMIN_TESTS", ""),
@@ -80,20 +83,27 @@ async def grafana_connector():
     except FileNotFoundError:
         pytest.skip("connections.yaml not found - cannot run integration tests")
 
-    # Find grafana-ha connection
-    grafana_ha = next(
-        (c for c in connections if c.connection_name == "grafana-ha"), None
+    # Find the requested test connection
+    grafana_connection = next(
+        (c for c in connections if c.connection_name == TEST_CONNECTION_NAME), None
     )
-    if not grafana_ha:
-        pytest.skip("grafana-ha connection not found in connections.yaml")
+    if not grafana_connection:
+        pytest.skip(
+            f"{TEST_CONNECTION_NAME} connection not found in connections.yaml. "
+            "Set GRAFANA_TEST_CONNECTION_NAME to override the default."
+        )
 
-    # Check for session token
-    session_token = os.getenv("GRAFANA_SESSION_GRAFANA_HA")
-    if not session_token:
-        pytest.skip("GRAFANA_SESSION_GRAFANA_HA not found in environment")
+    # These integration tests exercise user-profile endpoints, so they need
+    # session-based auth even though the package also supports API-key auth.
+    if not grafana_connection.session_token:
+        pytest.skip(
+            f"{TEST_CONNECTION_NAME} must have session-based auth available for "
+            "this integration suite. Configure session_token in connections.yaml "
+            f"or provide {grafana_connection.get_env_var_name()}."
+        )
 
     # Create connector
-    connector = GrafanaConnector(grafana_ha)
+    connector = GrafanaConnector(grafana_connection)
     yield connector
 
 
