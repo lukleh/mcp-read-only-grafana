@@ -6,6 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MCP Read-Only Grafana Server provides a read-only default command plus a separate write-capable command for Grafana via the Model Context Protocol (MCP). It uses session-based authentication and supports multiple Grafana connections simultaneously.
 
+## Runtime Config Location
+
+- Live runtime config file:
+  `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+- Checked-in sample file:
+  [`connections.yaml.sample`](connections.yaml.sample)
+
+Important distinction:
+
+- The installed server reads the live runtime file under `~/.config/...` by default
+- The checked-in sample file is documentation/source material only
+- `uv run mcp-read-only-grafana --write-sample-config` writes the sample into the resolved runtime config directory
+- `uv run mcp-read-only-grafana --config-dir /path/to/config-dir` changes the live config file to `/path/to/config-dir/connections.yaml`
+
 ## Development Commands
 
 ```bash
@@ -45,6 +59,9 @@ uv run pytest tests/test_integration_all_endpoints.py -v -m integration
 # Run integration tests INCLUDING write-capable endpoints (requires privileged credentials)
 RUN_WRITE_TESTS=1 uv run pytest tests/test_integration_all_endpoints.py -v -m integration
 
+# Override the default integration-test connection name if needed
+GRAFANA_TEST_CONNECTION_NAME=my_grafana uv run pytest tests/test_integration_all_endpoints.py -v -m integration
+
 # Run specific test category (e.g., only alerting tests)
 uv run pytest tests/test_integration_all_endpoints.py::TestAlertingProvisioningAPI -v
 
@@ -70,6 +87,14 @@ RUN_WRITE_TESTS=1 uv run pytest tests/test_integration_all_endpoints.py -v
 - `test_list_users` - Requires org admin permissions
 - `test_list_teams` - Requires org admin permissions
 - `TestAlertingProvisioningAPI` - All 16 provisioning API endpoints (requires Grafana admin)
+
+**Integration test connection selection:**
+- By default, the suite looks for a repo-root `connections.yaml` entry named
+  `grafana`
+- Override that with `GRAFANA_TEST_CONNECTION_NAME=<connection_name>` if your
+  local test fixture uses a different name
+- The chosen integration-test connection must have session-based auth available
+  because the suite exercises `/api/user`
 
 Accepted values: `1`, `true`, `yes`, `on` (case-insensitive)
 

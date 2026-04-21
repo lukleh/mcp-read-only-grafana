@@ -7,6 +7,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified across maintainer docs that the live packaged runtime config lives at `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`, while `connections.yaml.sample` in the repo is only a sample/source file.
+- Removed the hardcoded `grafana-ha` integration-test fixture name and now default to `grafana` with `GRAFANA_TEST_CONNECTION_NAME` as an override.
+
 ## [0.2.0] - 2026-04-09
 
 ### Added

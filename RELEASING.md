@@ -58,6 +58,17 @@ uv run mcp-read-only-grafana validate-config
 uv run mcp-read-only-grafana test-connection
 ```
 
+## Runtime Config Convention
+
+- The live runtime config file for packaged usage is
+  `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`.
+- The checked-in `connections.yaml.sample` file is documentation/source
+  material only.
+- `--write-sample-config` writes the sample into the resolved runtime config
+  directory.
+- `--config-dir /path/to/config-dir` changes the live config file location to
+  `/path/to/config-dir/connections.yaml`.
+
 ## How To Publish
 
 1. Make the release commit on `main`

@@ -5,7 +5,7 @@
 A secure MCP (Model Context Protocol) server for Grafana with a read-only default and a separate `mcp-grafana-write` command for write-capable workflows.
 
 > Default layout:
-> - Config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+> - Live config: `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
 > - Credentials: injected via the MCP client or shell environment
 > - Rotated session state: `~/.local/state/lukleh/mcp-read-only-grafana/session_tokens.json`
 > - Cache: `~/.cache/lukleh/mcp-read-only-grafana/`
@@ -56,11 +56,33 @@ The command above writes a starter config and matching schema to:
 - `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
 - `~/.config/lukleh/mcp-read-only-grafana/connections.schema.json`
 
+The live runtime config file used by the installed server is
+`~/.config/lukleh/mcp-read-only-grafana/connections.yaml`.
+
 ### 2. Confirm Runtime Paths
 
 ```bash
 uvx mcp-read-only-grafana@latest --print-paths
 ```
+
+### Where `connections.yaml` Lives
+
+By default, the server reads the live runtime config from:
+
+- `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+
+On this machine, that expands to:
+
+- `/Users/<your-user>/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+
+Important distinction:
+
+- The live runtime file is `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`
+- The checked-in repo sample is [`connections.yaml.sample`](connections.yaml.sample)
+
+The sample file documents the format, but it is not the file the installed
+server reads unless you explicitly copy or generate it into the runtime config
+directory.
 
 ### 3. Edit the Connections File
 
@@ -221,6 +243,10 @@ uv run mcp-grafana-write --print-paths
 ```
 
 The checked-in sample file remains available at [connections.yaml.sample](connections.yaml.sample) for documentation and review, but package users should prefer `--write-sample-config`.
+
+Even during local development, the server still uses the resolved runtime
+config path by default. It does not automatically read the repo's
+`connections.yaml.sample`.
 
 ## Available MCP Tools
 
