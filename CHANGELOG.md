@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-04-22
+
+### Changed
+
+- Alert provisioning tools now keep alert rules and rule groups editable in the Grafana UI by default.
+- Write-capable alert tools now expose an `editable_in_ui` MCP parameter so callers can opt out of that behavior without dealing with Grafana's raw provenance-header semantics.
+
 ## [0.2.1] - 2026-04-22
 
 ### Fixed
