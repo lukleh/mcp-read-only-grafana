@@ -319,7 +319,11 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
-    async def create_alert_rule(connection_name: str, rule: Dict[str, Any]) -> str:
+    async def create_alert_rule(
+        connection_name: str,
+        rule: Dict[str, Any],
+        disable_provenance: bool = False,
+    ) -> str:
         """
         [WRITE] Create a new alert rule.
 
@@ -327,17 +331,25 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
                   condition, data, noDataState, execErrState)
+            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
+                so the created alert stays editable in the Grafana UI
 
         Returns:
             JSON string with the created alert rule (including UID).
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.create_alert_rule(rule)
+        result = await connector.create_alert_rule(
+            rule,
+            disable_provenance=disable_provenance,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
     async def update_alert_rule(
-        connection_name: str, alert_uid: str, rule: Dict[str, Any]
+        connection_name: str,
+        alert_uid: str,
+        rule: Dict[str, Any],
+        disable_provenance: bool = False,
     ) -> str:
         """
         [WRITE] Update an existing alert rule.
@@ -346,12 +358,18 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             alert_uid: UID of the alert rule to update
             rule: Updated alert rule configuration
+            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
+                so the updated alert stays editable in the Grafana UI
 
         Returns:
             JSON string with the updated alert rule.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.update_alert_rule(alert_uid, rule)
+        result = await connector.update_alert_rule(
+            alert_uid,
+            rule,
+            disable_provenance=disable_provenance,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
@@ -376,6 +394,7 @@ def register_admin_tools(
         folder_uid: str,
         group: str,
         config: Dict[str, Any],
+        disable_provenance: bool = False,
     ) -> str:
         """
         [WRITE] Update a rule group's configuration (interval, rules).
@@ -385,12 +404,19 @@ def register_admin_tools(
             folder_uid: UID of the folder
             group: Name of the rule group
             config: Rule group configuration (folderUid, interval, rules, title)
+            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
+                so the rule group and its alerts stay editable in the Grafana UI
 
         Returns:
             JSON string with the updated rule group.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.update_rule_group_interval(folder_uid, group, config)
+        result = await connector.update_rule_group_interval(
+            folder_uid,
+            group,
+            config,
+            disable_provenance=disable_provenance,
+        )
         return json.dumps(result, indent=2)
 
     # =========================================================================

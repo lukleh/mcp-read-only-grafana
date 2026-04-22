@@ -157,6 +157,13 @@ class GrafanaConnector:
             self.client.headers.pop("Authorization", None)
             self.client.cookies.set("grafana_session", session_token)
 
+    @staticmethod
+    def _provenance_headers(disable_provenance: bool) -> dict[str, str] | None:
+        """Return Grafana's editable-provenance header when requested."""
+        if not disable_provenance:
+            return None
+        return {"X-Disable-Provenance": "true"}
+
     def _handle_response(self, response: httpx.Response) -> Any:
         """Process a successful response: check cookie refresh, parse JSON.
 
@@ -221,12 +228,19 @@ class GrafanaConnector:
             self._handle_request_error(e)
 
     async def _post(
-        self, endpoint: str, json_payload: Dict[str, Any] | None = None
+        self,
+        endpoint: str,
+        json_payload: Dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """Execute a POST request to Grafana API."""
         self._refresh_credentials()
         try:
-            response = await self.client.post(f"/api{endpoint}", json=json_payload)
+            response = await self.client.post(
+                f"/api{endpoint}",
+                json=json_payload,
+                headers=headers,
+            )
             response.raise_for_status()
             return self._handle_response(response)
         except httpx.HTTPStatusError as e:
@@ -239,12 +253,19 @@ class GrafanaConnector:
             self._handle_request_error(e)
 
     async def _put(
-        self, endpoint: str, json_payload: Dict[str, Any] | None = None
+        self,
+        endpoint: str,
+        json_payload: Dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """Execute a PUT request to Grafana API."""
         self._refresh_credentials()
         try:
-            response = await self.client.put(f"/api{endpoint}", json=json_payload)
+            response = await self.client.put(
+                f"/api{endpoint}",
+                json=json_payload,
+                headers=headers,
+            )
             response.raise_for_status()
             return self._handle_response(response)
         except httpx.HTTPStatusError as e:
@@ -1090,21 +1111,34 @@ class GrafanaConnector:
         )
 
     # Alert Rule Write Operations
-    async def create_alert_rule(self, rule: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_alert_rule(
+        self,
+        rule: Dict[str, Any],
+        disable_provenance: bool = False,
+    ) -> Dict[str, Any]:
         """
         Create a new alert rule.
 
         Args:
             rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
                   condition, data, noDataState, execErrState)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the alert editable in the UI when the rule group's provenance allows it
 
         Returns:
             Created alert rule with UID
         """
-        return await self._post("/v1/provisioning/alert-rules", json_payload=rule)
+        return await self._post(
+            "/v1/provisioning/alert-rules",
+            json_payload=rule,
+            headers=self._provenance_headers(disable_provenance),
+        )
 
     async def update_alert_rule(
-        self, alert_uid: str, rule: Dict[str, Any]
+        self,
+        alert_uid: str,
+        rule: Dict[str, Any],
+        disable_provenance: bool = False,
     ) -> Dict[str, Any]:
         """
         Update an existing alert rule.
@@ -1112,12 +1146,16 @@ class GrafanaConnector:
         Args:
             alert_uid: UID of the alert rule to update
             rule: Updated alert rule configuration
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the alert editable in the UI
 
         Returns:
             Updated alert rule
         """
         return await self._put(
-            f"/v1/provisioning/alert-rules/{alert_uid}", json_payload=rule
+            f"/v1/provisioning/alert-rules/{alert_uid}",
+            json_payload=rule,
+            headers=self._provenance_headers(disable_provenance),
         )
 
     async def delete_alert_rule(self, alert_uid: str) -> Dict[str, Any]:
@@ -1133,7 +1171,11 @@ class GrafanaConnector:
         return await self._delete(f"/v1/provisioning/alert-rules/{alert_uid}")
 
     async def update_rule_group_interval(
-        self, folder_uid: str, group: str, config: Dict[str, Any]
+        self,
+        folder_uid: str,
+        group: str,
+        config: Dict[str, Any],
+        disable_provenance: bool = False,
     ) -> Dict[str, Any]:
         """
         Update a rule group's configuration (interval, rules).
@@ -1142,6 +1184,8 @@ class GrafanaConnector:
             folder_uid: UID of the folder
             group: Name of the rule group
             config: Rule group configuration (folderUid, interval, rules, title)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the rule group and its alerts editable in the UI
 
         Returns:
             Updated rule group
@@ -1149,6 +1193,7 @@ class GrafanaConnector:
         return await self._put(
             f"/v1/provisioning/folder/{folder_uid}/rule-groups/{group}",
             json_payload=config,
+            headers=self._provenance_headers(disable_provenance),
         )
 
     # Contact Points
