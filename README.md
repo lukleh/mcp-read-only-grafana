@@ -565,7 +565,7 @@ Create a new alert rule via the provisioning API.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `rule` (required): Alert rule definition (JSON object)
-- `disable_provenance` (optional): When `true`, sends `X-Disable-Provenance: true` so Grafana keeps the alert editable in the UI
+- `disable_provenance` (optional): Defaults to `true` and sends `X-Disable-Provenance: true` so Grafana keeps the alert editable in the UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Created alert rule with UID
 
@@ -576,7 +576,7 @@ Update an existing alert rule.
 - `connection_name` (required): Name of the Grafana connection
 - `rule_uid` (required): UID of the alert rule to update
 - `rule` (required): Updated alert rule definition (JSON object)
-- `disable_provenance` (optional): When `true`, sends `X-Disable-Provenance: true` so Grafana keeps the alert editable in the UI
+- `disable_provenance` (optional): Defaults to `true` and sends `X-Disable-Provenance: true` so Grafana keeps the alert editable in the UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Updated alert rule
 
@@ -597,7 +597,7 @@ Update a rule group's interval configuration.
 - `folder_uid` (required): UID of the folder containing the rule group
 - `group_name` (required): Name of the rule group
 - `config` (required): Rule group configuration (JSON object with `interval`, etc.)
-- `disable_provenance` (optional): When `true`, sends `X-Disable-Provenance: true` so Grafana keeps the rule group and its alerts editable in the UI
+- `disable_provenance` (optional): Defaults to `true` and sends `X-Disable-Provenance: true` so Grafana keeps the rule group and its alerts editable in the UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Updated rule group configuration
 

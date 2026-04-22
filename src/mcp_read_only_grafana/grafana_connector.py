@@ -1114,7 +1114,7 @@ class GrafanaConnector:
     async def create_alert_rule(
         self,
         rule: Dict[str, Any],
-        disable_provenance: bool = False,
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Create a new alert rule.
@@ -1123,7 +1123,8 @@ class GrafanaConnector:
             rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
                   condition, data, noDataState, execErrState)
             disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
-                the alert editable in the UI when the rule group's provenance allows it
+                the alert editable in the UI when the rule group's provenance allows it.
+                Defaults to True; set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Created alert rule with UID
@@ -1138,7 +1139,7 @@ class GrafanaConnector:
         self,
         alert_uid: str,
         rule: Dict[str, Any],
-        disable_provenance: bool = False,
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Update an existing alert rule.
@@ -1147,7 +1148,8 @@ class GrafanaConnector:
             alert_uid: UID of the alert rule to update
             rule: Updated alert rule configuration
             disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
-                the alert editable in the UI
+                the alert editable in the UI. Defaults to True; set to False to keep
+                Grafana's provisioned behavior.
 
         Returns:
             Updated alert rule
@@ -1175,7 +1177,7 @@ class GrafanaConnector:
         folder_uid: str,
         group: str,
         config: Dict[str, Any],
-        disable_provenance: bool = False,
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Update a rule group's configuration (interval, rules).
@@ -1185,7 +1187,8 @@ class GrafanaConnector:
             group: Name of the rule group
             config: Rule group configuration (folderUid, interval, rules, title)
             disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
-                the rule group and its alerts editable in the UI
+                the rule group and its alerts editable in the UI. Defaults to True;
+                set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Updated rule group

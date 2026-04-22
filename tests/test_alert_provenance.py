@@ -46,8 +46,10 @@ def api_key_connection(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_create_alert_rule_sends_disable_provenance_header(api_key_connection):
-    """Alert creation should forward the editable-provenance header when requested."""
+async def test_create_alert_rule_sends_disable_provenance_header_by_default(
+    api_key_connection,
+):
+    """Alert creation should default to the editable-provenance header."""
     captured: dict[str, str | None] = {}
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -57,10 +59,7 @@ async def test_create_alert_rule_sends_disable_provenance_header(api_key_connect
         return httpx.Response(201, json={"uid": "rule-1"})
 
     connector = create_connector(api_key_connection, handler)
-    result = await connector.create_alert_rule(
-        {"title": "Example rule"},
-        disable_provenance=True,
-    )
+    result = await connector.create_alert_rule({"title": "Example rule"})
     await connector.client.aclose()
 
     assert result["uid"] == "rule-1"
@@ -70,10 +69,10 @@ async def test_create_alert_rule_sends_disable_provenance_header(api_key_connect
 
 
 @pytest.mark.asyncio
-async def test_update_rule_group_omits_disable_provenance_header_by_default(
+async def test_update_rule_group_can_opt_out_of_disable_provenance(
     api_key_connection,
 ):
-    """Rule-group updates should keep the current behavior unless requested."""
+    """Rule-group updates should skip the header only when explicitly disabled."""
     captured: dict[str, str | None] = {}
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -86,6 +85,7 @@ async def test_update_rule_group_omits_disable_provenance_header_by_default(
         "folder-uid",
         "group-name",
         {"interval": "1m", "rules": []},
+        disable_provenance=False,
     )
     await connector.client.aclose()
 
@@ -103,7 +103,7 @@ class FakeAlertConnector:
     async def create_alert_rule(
         self,
         rule: dict[str, object],
-        disable_provenance: bool = False,
+        disable_provenance: bool = True,
     ) -> dict[str, object]:
         self.calls.append(
             {
@@ -115,8 +115,8 @@ class FakeAlertConnector:
 
 
 @pytest.mark.asyncio
-async def test_create_alert_rule_tool_passes_disable_provenance():
-    """The MCP tool should expose and forward the disable_provenance flag."""
+async def test_create_alert_rule_tool_defaults_disable_provenance_to_true():
+    """The MCP tool should default to editable-provenance alert writes."""
     connector = FakeAlertConnector()
     mcp = FastMCP("test-admin-tools")
     register_admin_tools(mcp, {"test": connector})
@@ -126,7 +126,6 @@ async def test_create_alert_rule_tool_passes_disable_provenance():
         {
             "connection_name": "test",
             "rule": {"title": "Example rule"},
-            "disable_provenance": True,
         },
         convert_result=False,
     )
