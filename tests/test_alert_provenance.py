@@ -115,8 +115,8 @@ class FakeAlertConnector:
 
 
 @pytest.mark.asyncio
-async def test_create_alert_rule_tool_defaults_disable_provenance_to_true():
-    """The MCP tool should default to editable-provenance alert writes."""
+async def test_create_alert_rule_tool_defaults_editable_in_ui_to_true():
+    """The MCP tool should default to alerts staying editable in the UI."""
     connector = FakeAlertConnector()
     mcp = FastMCP("test-admin-tools")
     register_admin_tools(mcp, {"test": connector})
@@ -135,5 +135,31 @@ async def test_create_alert_rule_tool_defaults_disable_provenance_to_true():
         {
             "rule": {"title": "Example rule"},
             "disable_provenance": True,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_create_alert_rule_tool_can_opt_out_of_editable_in_ui():
+    """The MCP tool should let callers keep Grafana's provisioned behavior."""
+    connector = FakeAlertConnector()
+    mcp = FastMCP("test-admin-tools")
+    register_admin_tools(mcp, {"test": connector})
+
+    result = await mcp._tool_manager.call_tool(
+        "create_alert_rule",
+        {
+            "connection_name": "test",
+            "rule": {"title": "Example rule"},
+            "editable_in_ui": False,
+        },
+        convert_result=False,
+    )
+
+    assert json.loads(result) == {"uid": "rule-1"}
+    assert connector.calls == [
+        {
+            "rule": {"title": "Example rule"},
+            "disable_provenance": False,
         }
     ]

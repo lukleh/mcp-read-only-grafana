@@ -322,7 +322,7 @@ def register_admin_tools(
     async def create_alert_rule(
         connection_name: str,
         rule: Dict[str, Any],
-        disable_provenance: bool = True,
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Create a new alert rule.
@@ -331,9 +331,8 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             rule: Alert rule configuration (requires: title, ruleGroup, folderUID,
                   condition, data, noDataState, execErrState)
-            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
-                so the created alert stays editable in the Grafana UI. Defaults to
-                True; set to False to keep Grafana's provisioned behavior.
+            editable_in_ui: Keep the created alert editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the created alert rule (including UID).
@@ -341,7 +340,7 @@ def register_admin_tools(
         connector = get_connector(connectors, connection_name)
         result = await connector.create_alert_rule(
             rule,
-            disable_provenance=disable_provenance,
+            disable_provenance=editable_in_ui,
         )
         return json.dumps(result, indent=2)
 
@@ -350,7 +349,7 @@ def register_admin_tools(
         connection_name: str,
         alert_uid: str,
         rule: Dict[str, Any],
-        disable_provenance: bool = True,
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Update an existing alert rule.
@@ -359,9 +358,8 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             alert_uid: UID of the alert rule to update
             rule: Updated alert rule configuration
-            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
-                so the updated alert stays editable in the Grafana UI. Defaults to
-                True; set to False to keep Grafana's provisioned behavior.
+            editable_in_ui: Keep the updated alert editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the updated alert rule.
@@ -370,7 +368,7 @@ def register_admin_tools(
         result = await connector.update_alert_rule(
             alert_uid,
             rule,
-            disable_provenance=disable_provenance,
+            disable_provenance=editable_in_ui,
         )
         return json.dumps(result, indent=2)
 
@@ -396,7 +394,7 @@ def register_admin_tools(
         folder_uid: str,
         group: str,
         config: Dict[str, Any],
-        disable_provenance: bool = True,
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Update a rule group's configuration (interval, rules).
@@ -406,9 +404,9 @@ def register_admin_tools(
             folder_uid: UID of the folder
             group: Name of the rule group
             config: Rule group configuration (folderUid, interval, rules, title)
-            disable_provenance: Send Grafana's `X-Disable-Provenance: true` header
-                so the rule group and its alerts stay editable in the Grafana UI.
-                Defaults to True; set to False to keep Grafana's provisioned behavior.
+            editable_in_ui: Keep the rule group and its alerts editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string with the updated rule group.
@@ -418,7 +416,7 @@ def register_admin_tools(
             folder_uid,
             group,
             config,
-            disable_provenance=disable_provenance,
+            disable_provenance=editable_in_ui,
         )
         return json.dumps(result, indent=2)
 
