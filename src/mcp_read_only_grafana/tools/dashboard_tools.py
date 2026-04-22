@@ -8,7 +8,8 @@ This module provides tools for:
 """
 
 import json
-from typing import Dict, List, Optional
+from collections.abc import Mapping
+from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -18,7 +19,7 @@ from ..validation import get_connector
 
 def register_dashboard_tools(
     mcp: FastMCP,
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register dashboard-related MCP tools.
 

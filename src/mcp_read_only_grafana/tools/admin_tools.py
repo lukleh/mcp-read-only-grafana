@@ -13,6 +13,7 @@ Includes:
 """
 
 import json
+from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -23,7 +24,7 @@ from ..validation import get_connector
 
 def register_admin_tools(
     mcp: FastMCP,
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register write-capable MCP tools.
 

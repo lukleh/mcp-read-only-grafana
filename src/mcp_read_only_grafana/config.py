@@ -200,8 +200,12 @@ class ConfigParser:
         if not self.config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
-        with self.config_path.open("r", encoding="utf-8") as handle:
-            raw_config = yaml.safe_load(handle) or []
+        yaml_text = self.config_path.read_text(encoding="utf-8")
+        return self.load_config_from_text(yaml_text)
+
+    def load_config_from_text(self, yaml_text: str) -> list[GrafanaConnection]:
+        """Load and parse connection configuration from a YAML text snapshot."""
+        raw_config = yaml.safe_load(yaml_text) or []
 
         return [self._process_connection(conn_data) for conn_data in raw_config]
 

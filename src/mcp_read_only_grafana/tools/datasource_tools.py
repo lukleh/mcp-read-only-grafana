@@ -8,6 +8,7 @@ This module provides tools for:
 """
 
 import json
+from collections.abc import Mapping
 from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -67,7 +68,7 @@ async def _get_datasource_health_result(
 
 def register_datasource_tools(
     mcp: FastMCP,
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register datasource-related MCP tools.
 

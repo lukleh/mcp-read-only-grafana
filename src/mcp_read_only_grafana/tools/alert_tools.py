@@ -9,7 +9,8 @@ This module provides tools for:
 """
 
 import json
-from typing import Dict, List, Optional
+from collections.abc import Mapping
+from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -19,7 +20,7 @@ from ..validation import get_connector
 
 def register_alert_tools(
     mcp: FastMCP,
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register alert-related MCP tools.
 
@@ -178,7 +179,7 @@ def register_alert_tools(
     async def get_alert_state_history(
         connection_name: str,
         rule_uid: Optional[str] = None,
-        labels: Optional[Dict[str, str]] = None,
+        labels: Optional[dict[str, str]] = None,
         from_time: Optional[str] = None,
         to_time: Optional[str] = None,
         limit: Optional[int] = None,
