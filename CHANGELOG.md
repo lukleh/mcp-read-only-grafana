@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-22
+
+### Fixed
+
+- Reloaded connections now keep serving the last successful configuration when a config edit is invalid instead of partially mutating reused connectors.
+- Reused connectors now clear stale auth state when switching between API key and session-based authentication.
+- Retired connectors from replaced or removed connections are now closed after subsequent successful reloads instead of accumulating for the lifetime of the process.
+
 ### Changed
 
 - Clarified across maintainer docs that the live packaged runtime config lives at `~/.config/lukleh/mcp-read-only-grafana/connections.yaml`, while `connections.yaml.sample` in the repo is only a sample/source file.

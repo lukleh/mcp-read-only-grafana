@@ -149,9 +149,12 @@ class GrafanaConnector:
         """
         if self.connection.api_key:
             api_key = self.connection.reload_api_key()
+            self.client.headers.pop("Authorization", None)
             self.client.headers["Authorization"] = f"Bearer {api_key}"
+            self.client.cookies.pop("grafana_session", None)
         else:
             session_token = self.connection.reload_session_token()
+            self.client.headers.pop("Authorization", None)
             self.client.cookies.set("grafana_session", session_token)
 
     def _handle_response(self, response: httpx.Response) -> Any:

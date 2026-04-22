@@ -4,14 +4,14 @@ This module provides helper functions that centralize common validation
 patterns used across all MCP tool functions.
 """
 
-from typing import Dict
+from collections.abc import Mapping
 
 from .exceptions import ConnectionNotFoundError
 from .grafana_connector import GrafanaConnector
 
 
 def get_connector(
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
     connection_name: str,
 ) -> GrafanaConnector:
     """Get a connector by name or raise ConnectionNotFoundError.
@@ -49,9 +49,10 @@ def get_connector(
             return json.dumps(health, indent=2)
         ```
     """
-    if connection_name not in connectors:
+    connector = connectors.get(connection_name)
+    if connector is None:
         raise ConnectionNotFoundError(
             connection_name=connection_name,
             available=list(connectors.keys()),
         )
-    return connectors[connection_name]
+    return connector

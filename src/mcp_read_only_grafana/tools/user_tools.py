@@ -7,6 +7,7 @@ This module provides tools for:
 """
 
 import json
+from collections.abc import Mapping
 from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -38,7 +39,7 @@ async def _get_current_user_result(connector: GrafanaConnector) -> Dict[str, Any
 
 def register_user_tools(
     mcp: FastMCP,
-    connectors: Dict[str, GrafanaConnector],
+    connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register user-related MCP tools.
 

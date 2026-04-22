@@ -300,6 +300,38 @@ async def test_delete_with_session_cookie_auth(session_connection):
     assert "grafana_session" in captured["cookie_header"]
 
 
+def test_refresh_credentials_clears_stale_session_cookie_when_api_key_is_active():
+    """API key auth should remove any stale grafana_session cookie."""
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        api_key="fresh-api-key",
+    )
+    connector = GrafanaConnector(connection)
+    connector.client.cookies.set("grafana_session", "stale-session")
+
+    connector._refresh_credentials()
+
+    assert connector.client.headers["Authorization"] == "Bearer fresh-api-key"
+    assert connector.client.cookies.get("grafana_session") is None
+
+
+def test_refresh_credentials_clears_stale_auth_header_when_session_is_active():
+    """Session auth should remove any stale Authorization header."""
+    connection = GrafanaConnection(
+        connection_name="test",
+        url="https://grafana.example.com",
+        session_token="fresh-session",
+    )
+    connector = GrafanaConnector(connection)
+    connector.client.headers["Authorization"] = "Bearer stale-api-key"
+
+    connector._refresh_credentials()
+
+    assert connector.client.headers.get("Authorization") is None
+    assert connector.client.cookies.get("grafana_session") == "fresh-session"
+
+
 # =============================================================================
 # Helper Method Tests
 # =============================================================================
