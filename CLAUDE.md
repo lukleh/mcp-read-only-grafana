@@ -189,3 +189,19 @@ Session-based authentication using Grafana session cookies:
      - `get_ruler_rules()`, `get_ruler_namespace_rules()`, `get_ruler_group()`
    - **Provisioning API** (write-capable): Exposed by `mcp-grafana-write`, used for infrastructure-as-code workflows
      - `list_provisioned_alert_rules()`, `get_provisioned_alert_rule()`, etc.
+
+## Releasing
+
+A merged PR does **not** ship to PyPI on its own — publishing is triggered by pushing a
+`vX.Y.Z` git tag, which runs `.github/workflows/publish.yml`. See [`RELEASING.md`](RELEASING.md)
+for the authoritative checklist; the short version:
+
+1. **Bump the version** in `pyproject.toml` `[project].version` (single source of truth; the
+   runtime reads it via `importlib.metadata`), then refresh the lockfile: `uv sync --extra dev`.
+2. **Promote the changelog**: in `CHANGELOG.md`, move the `## [Unreleased]` items into a new
+   `## [X.Y.Z] - YYYY-MM-DD` section.
+3. **Commit on `main`** (`pyproject.toml` + `CHANGELOG.md` + `uv.lock`), then tag and push — the
+   tag must match `pyproject.toml` exactly or CI fails the release:
+   `git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z`.
+4. **Approve the publish**: the workflow's final job pauses on the GitHub `pypi` environment for
+   manual approval, then publishes via PyPI Trusted Publishing (OIDC — no stored token).

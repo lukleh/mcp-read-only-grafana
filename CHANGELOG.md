@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-05
+
+### Changed
+
+- Alerting provisioning writes now disable Grafana provenance by default for contact points, notification policies, notification templates, mute timings, alert-rule deletes, and other `/api/v1/provisioning/...` write paths so resources remain editable in the UI.
+- Write-capable alerting provisioning tools now expose `editable_in_ui` consistently across provisioning creates, updates, and deletes, allowing callers to opt into Grafana's provisioned behavior when needed.
+
 ## [0.2.2] - 2026-04-22
 
 ### Changed

@@ -318,6 +318,11 @@ def register_admin_tools(
     # Write Operations - Alert Rules
     # =========================================================================
 
+    # Note: the `editable_in_ui` tool param maps directly to the connector's
+    # `disable_provenance` for every write below. This is not an inversion:
+    # sending `X-Disable-Provenance: true` is exactly what keeps a provisioned
+    # resource editable in the UI, so editable_in_ui == disable_provenance.
+
     @mcp.tool()
     async def create_alert_rule(
         connection_name: str,
@@ -373,19 +378,29 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
-    async def delete_alert_rule(connection_name: str, alert_uid: str) -> str:
+    async def delete_alert_rule(
+        connection_name: str,
+        alert_uid: str,
+        editable_in_ui: bool = True,
+    ) -> str:
         """
         [WRITE] Delete an alert rule.
 
         Args:
             connection_name: Name of the Grafana connection
             alert_uid: UID of the alert rule to delete
+            editable_in_ui: Keep related provisioning resources editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string confirming deletion.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.delete_alert_rule(alert_uid)
+        result = await connector.delete_alert_rule(
+            alert_uid,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps({"status": "deleted", "uid": alert_uid, **result}, indent=2)
 
     @mcp.tool()
@@ -426,7 +441,9 @@ def register_admin_tools(
 
     @mcp.tool()
     async def create_contact_point(
-        connection_name: str, contact_point: Dict[str, Any]
+        connection_name: str,
+        contact_point: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Create a new contact point.
@@ -434,17 +451,25 @@ def register_admin_tools(
         Args:
             connection_name: Name of the Grafana connection
             contact_point: Contact point configuration (requires: name, type, settings)
+            editable_in_ui: Keep the contact point editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the created contact point (including UID).
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.create_contact_point(contact_point)
+        result = await connector.create_contact_point(
+            contact_point,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
     async def update_contact_point(
-        connection_name: str, uid: str, contact_point: Dict[str, Any]
+        connection_name: str,
+        uid: str,
+        contact_point: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Update an existing contact point.
@@ -453,28 +478,44 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             uid: UID of the contact point to update
             contact_point: Updated contact point configuration
+            editable_in_ui: Keep the contact point editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the updated contact point.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.update_contact_point(uid, contact_point)
+        result = await connector.update_contact_point(
+            uid,
+            contact_point,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
-    async def delete_contact_point(connection_name: str, uid: str) -> str:
+    async def delete_contact_point(
+        connection_name: str,
+        uid: str,
+        editable_in_ui: bool = True,
+    ) -> str:
         """
         [WRITE] Delete a contact point.
 
         Args:
             connection_name: Name of the Grafana connection
             uid: UID of the contact point to delete
+            editable_in_ui: Keep related provisioning resources editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string confirming deletion.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.delete_contact_point(uid)
+        result = await connector.delete_contact_point(
+            uid,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps({"status": "deleted", "uid": uid, **result}, indent=2)
 
     # =========================================================================
@@ -483,7 +524,9 @@ def register_admin_tools(
 
     @mcp.tool()
     async def set_notification_policies(
-        connection_name: str, policies: Dict[str, Any]
+        connection_name: str,
+        policies: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Set the notification policy tree.
@@ -491,27 +534,41 @@ def register_admin_tools(
         Args:
             connection_name: Name of the Grafana connection
             policies: Notification policy tree configuration (Route object)
+            editable_in_ui: Keep the notification policy tree editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string with the updated notification policies.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.set_notification_policies(policies)
+        result = await connector.set_notification_policies(
+            policies,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
-    async def delete_notification_policies(connection_name: str) -> str:
+    async def delete_notification_policies(
+        connection_name: str,
+        editable_in_ui: bool = True,
+    ) -> str:
         """
         [WRITE] Clear the notification policy tree (reset to defaults).
 
         Args:
             connection_name: Name of the Grafana connection
+            editable_in_ui: Keep the notification policy tree editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string confirming deletion.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.delete_notification_policies()
+        result = await connector.delete_notification_policies(
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps({"status": "deleted", **result}, indent=2)
 
     # =========================================================================
@@ -520,7 +577,9 @@ def register_admin_tools(
 
     @mcp.tool()
     async def create_mute_timing(
-        connection_name: str, mute_timing: Dict[str, Any]
+        connection_name: str,
+        mute_timing: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Create a new mute timing.
@@ -528,17 +587,25 @@ def register_admin_tools(
         Args:
             connection_name: Name of the Grafana connection
             mute_timing: Mute timing configuration (requires: name, time_intervals)
+            editable_in_ui: Keep the mute timing editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the created mute timing.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.create_mute_timing(mute_timing)
+        result = await connector.create_mute_timing(
+            mute_timing,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
     async def update_mute_timing(
-        connection_name: str, name: str, mute_timing: Dict[str, Any]
+        connection_name: str,
+        name: str,
+        mute_timing: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Update an existing mute timing.
@@ -547,28 +614,44 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             name: Name of the mute timing to update
             mute_timing: Updated mute timing configuration
+            editable_in_ui: Keep the mute timing editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the updated mute timing.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.update_mute_timing(name, mute_timing)
+        result = await connector.update_mute_timing(
+            name,
+            mute_timing,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
-    async def delete_mute_timing(connection_name: str, name: str) -> str:
+    async def delete_mute_timing(
+        connection_name: str,
+        name: str,
+        editable_in_ui: bool = True,
+    ) -> str:
         """
         [WRITE] Delete a mute timing.
 
         Args:
             connection_name: Name of the Grafana connection
             name: Name of the mute timing to delete
+            editable_in_ui: Keep related provisioning resources editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string confirming deletion.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.delete_mute_timing(name)
+        result = await connector.delete_mute_timing(
+            name,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps({"status": "deleted", "name": name, **result}, indent=2)
 
     # =========================================================================
@@ -577,7 +660,10 @@ def register_admin_tools(
 
     @mcp.tool()
     async def set_notification_template(
-        connection_name: str, name: str, template: Dict[str, Any]
+        connection_name: str,
+        name: str,
+        template: Dict[str, Any],
+        editable_in_ui: bool = True,
     ) -> str:
         """
         [WRITE] Create or update a notification template.
@@ -586,26 +672,42 @@ def register_admin_tools(
             connection_name: Name of the Grafana connection
             name: Name of the template
             template: Template configuration (requires: template field with content)
+            editable_in_ui: Keep the notification template editable in the Grafana UI.
+                Defaults to True. Set to False to keep Grafana's provisioned behavior.
 
         Returns:
             JSON string with the created/updated template.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.set_notification_template(name, template)
+        result = await connector.set_notification_template(
+            name,
+            template,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps(result, indent=2)
 
     @mcp.tool()
-    async def delete_notification_template(connection_name: str, name: str) -> str:
+    async def delete_notification_template(
+        connection_name: str,
+        name: str,
+        editable_in_ui: bool = True,
+    ) -> str:
         """
         [WRITE] Delete a notification template.
 
         Args:
             connection_name: Name of the Grafana connection
             name: Name of the template to delete
+            editable_in_ui: Keep related provisioning resources editable in the
+                Grafana UI. Defaults to True. Set to False to keep Grafana's
+                provisioned behavior.
 
         Returns:
             JSON string confirming deletion.
         """
         connector = get_connector(connectors, connection_name)
-        result = await connector.delete_notification_template(name)
+        result = await connector.delete_notification_template(
+            name,
+            disable_provenance=editable_in_ui,
+        )
         return json.dumps({"status": "deleted", "name": name, **result}, indent=2)

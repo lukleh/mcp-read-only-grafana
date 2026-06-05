@@ -586,6 +586,7 @@ Delete an alert rule.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `rule_uid` (required): UID of the alert rule to delete
+- `editable_in_ui` (optional): Defaults to `true` and keeps related provisioning resources editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Confirmation of deletion
 
@@ -609,6 +610,7 @@ Create a new contact point for alert notifications.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `contact_point` (required): Contact point definition (JSON object)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the contact point editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Created contact point with UID
 
@@ -619,6 +621,7 @@ Update an existing contact point.
 - `connection_name` (required): Name of the Grafana connection
 - `contact_point_uid` (required): UID of the contact point to update
 - `contact_point` (required): Updated contact point definition (JSON object)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the contact point editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Updated contact point
 
@@ -628,6 +631,7 @@ Delete a contact point.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `contact_point_uid` (required): UID of the contact point to delete
+- `editable_in_ui` (optional): Defaults to `true` and keeps related provisioning resources editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Confirmation of deletion
 
@@ -639,6 +643,7 @@ Set the entire notification policy tree.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `policies` (required): Notification policy tree (JSON object)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the notification policy tree editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Updated notification policies
 
@@ -647,6 +652,7 @@ Reset notification policies to default.
 
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
+- `editable_in_ui` (optional): Defaults to `true` and keeps the notification policy tree editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Confirmation of reset
 
@@ -658,6 +664,7 @@ Create a new mute timing for silencing alerts.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `mute_timing` (required): Mute timing definition (JSON object)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the mute timing editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Created mute timing
 
@@ -668,6 +675,7 @@ Update an existing mute timing.
 - `connection_name` (required): Name of the Grafana connection
 - `mute_timing_name` (required): Name of the mute timing to update
 - `mute_timing` (required): Updated mute timing definition (JSON object)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the mute timing editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Updated mute timing
 
@@ -677,6 +685,7 @@ Delete a mute timing.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `mute_timing_name` (required): Name of the mute timing to delete
+- `editable_in_ui` (optional): Defaults to `true` and keeps related provisioning resources editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Confirmation of deletion
 
@@ -689,6 +698,7 @@ Create or update a notification template.
 - `connection_name` (required): Name of the Grafana connection
 - `template_name` (required): Name of the template
 - `template` (required): Template definition (JSON object with `template` field)
+- `editable_in_ui` (optional): Defaults to `true` and keeps the notification template editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Created/updated template
 
@@ -698,6 +708,7 @@ Delete a notification template.
 **Parameters:**
 - `connection_name` (required): Name of the Grafana connection
 - `template_name` (required): Name of the template to delete
+- `editable_in_ui` (optional): Defaults to `true` and keeps related provisioning resources editable in the Grafana UI. Set to `false` to keep Grafana's provisioned behavior
 
 **Returns:** Confirmation of deletion
 
