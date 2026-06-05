@@ -158,11 +158,33 @@ class GrafanaConnector:
             self.client.cookies.set("grafana_session", session_token)
 
     @staticmethod
-    def _provenance_headers(disable_provenance: bool) -> dict[str, str] | None:
-        """Return Grafana's editable-provenance header when requested."""
-        if not disable_provenance:
-            return None
-        return {"X-Disable-Provenance": "true"}
+    def _is_alerting_provisioning_endpoint(endpoint: str) -> bool:
+        """Return whether the endpoint uses Grafana alerting provisioning writes."""
+        return endpoint.startswith("/v1/provisioning/")
+
+    def _write_headers(
+        self,
+        endpoint: str,
+        headers: dict[str, str] | None = None,
+        disable_provenance: bool | None = None,
+    ) -> dict[str, str] | None:
+        """Build headers for Grafana API writes.
+
+        Grafana's alerting provisioning API locks resources as provisioned unless
+        writes include `X-Disable-Provenance: true`. Default provisioning writes
+        to UI-editable behavior, while allowing callers to opt into Grafana's
+        provisioned behavior with `disable_provenance=False`.
+        """
+        resolved_headers = dict(headers or {})
+        if disable_provenance is None:
+            disable_provenance = self._is_alerting_provisioning_endpoint(endpoint)
+
+        if disable_provenance and not any(
+            key.lower() == "x-disable-provenance" for key in resolved_headers
+        ):
+            resolved_headers["X-Disable-Provenance"] = "true"
+
+        return resolved_headers or None
 
     def _handle_response(self, response: httpx.Response) -> Any:
         """Process a successful response: check cookie refresh, parse JSON.
@@ -232,6 +254,7 @@ class GrafanaConnector:
         endpoint: str,
         json_payload: Dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        disable_provenance: bool | None = None,
     ) -> Any:
         """Execute a POST request to Grafana API."""
         self._refresh_credentials()
@@ -239,7 +262,7 @@ class GrafanaConnector:
             response = await self.client.post(
                 f"/api{endpoint}",
                 json=json_payload,
-                headers=headers,
+                headers=self._write_headers(endpoint, headers, disable_provenance),
             )
             response.raise_for_status()
             return self._handle_response(response)
@@ -257,6 +280,7 @@ class GrafanaConnector:
         endpoint: str,
         json_payload: Dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        disable_provenance: bool | None = None,
     ) -> Any:
         """Execute a PUT request to Grafana API."""
         self._refresh_credentials()
@@ -264,7 +288,7 @@ class GrafanaConnector:
             response = await self.client.put(
                 f"/api{endpoint}",
                 json=json_payload,
-                headers=headers,
+                headers=self._write_headers(endpoint, headers, disable_provenance),
             )
             response.raise_for_status()
             return self._handle_response(response)
@@ -277,11 +301,19 @@ class GrafanaConnector:
         except httpx.RequestError as e:
             self._handle_request_error(e)
 
-    async def _delete(self, endpoint: str) -> Any:
+    async def _delete(
+        self,
+        endpoint: str,
+        headers: dict[str, str] | None = None,
+        disable_provenance: bool | None = None,
+    ) -> Any:
         """Execute a DELETE request to Grafana API."""
         self._refresh_credentials()
         try:
-            response = await self.client.delete(f"/api{endpoint}")
+            response = await self.client.delete(
+                f"/api{endpoint}",
+                headers=self._write_headers(endpoint, headers, disable_provenance),
+            )
             response.raise_for_status()
             return self._handle_response(response)
         except httpx.HTTPStatusError as e:
@@ -1132,7 +1164,7 @@ class GrafanaConnector:
         return await self._post(
             "/v1/provisioning/alert-rules",
             json_payload=rule,
-            headers=self._provenance_headers(disable_provenance),
+            disable_provenance=disable_provenance,
         )
 
     async def update_alert_rule(
@@ -1157,20 +1189,30 @@ class GrafanaConnector:
         return await self._put(
             f"/v1/provisioning/alert-rules/{alert_uid}",
             json_payload=rule,
-            headers=self._provenance_headers(disable_provenance),
+            disable_provenance=disable_provenance,
         )
 
-    async def delete_alert_rule(self, alert_uid: str) -> Dict[str, Any]:
+    async def delete_alert_rule(
+        self,
+        alert_uid: str,
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Delete an alert rule.
 
         Args:
             alert_uid: UID of the alert rule to delete
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                related provisioning resources editable in the UI. Defaults to True;
+                set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Empty dict on success
         """
-        return await self._delete(f"/v1/provisioning/alert-rules/{alert_uid}")
+        return await self._delete(
+            f"/v1/provisioning/alert-rules/{alert_uid}",
+            disable_provenance=disable_provenance,
+        )
 
     async def update_rule_group_interval(
         self,
@@ -1196,7 +1238,7 @@ class GrafanaConnector:
         return await self._put(
             f"/v1/provisioning/folder/{folder_uid}/rule-groups/{group}",
             json_payload=config,
-            headers=self._provenance_headers(disable_provenance),
+            disable_provenance=disable_provenance,
         )
 
     # Contact Points
@@ -1211,23 +1253,33 @@ class GrafanaConnector:
 
     # Contact Point Write Operations
     async def create_contact_point(
-        self, contact_point: Dict[str, Any]
+        self,
+        contact_point: Dict[str, Any],
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Create a new contact point.
 
         Args:
             contact_point: Contact point configuration (requires: name, type, settings)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the contact point editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Created contact point with UID
         """
         return await self._post(
-            "/v1/provisioning/contact-points", json_payload=contact_point
+            "/v1/provisioning/contact-points",
+            json_payload=contact_point,
+            disable_provenance=disable_provenance,
         )
 
     async def update_contact_point(
-        self, uid: str, contact_point: Dict[str, Any]
+        self,
+        uid: str,
+        contact_point: Dict[str, Any],
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Update an existing contact point.
@@ -1235,25 +1287,40 @@ class GrafanaConnector:
         Args:
             uid: UID of the contact point to update
             contact_point: Updated contact point configuration
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the contact point editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Updated contact point
         """
         return await self._put(
-            f"/v1/provisioning/contact-points/{uid}", json_payload=contact_point
+            f"/v1/provisioning/contact-points/{uid}",
+            json_payload=contact_point,
+            disable_provenance=disable_provenance,
         )
 
-    async def delete_contact_point(self, uid: str) -> Dict[str, Any]:
+    async def delete_contact_point(
+        self,
+        uid: str,
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Delete a contact point.
 
         Args:
             uid: UID of the contact point to delete
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                related provisioning resources editable in the UI. Defaults to True;
+                set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Empty dict on success
         """
-        return await self._delete(f"/v1/provisioning/contact-points/{uid}")
+        return await self._delete(
+            f"/v1/provisioning/contact-points/{uid}",
+            disable_provenance=disable_provenance,
+        )
 
     # Notification Policies
     async def get_notification_policies(self) -> Dict[str, Any]:
@@ -1267,27 +1334,47 @@ class GrafanaConnector:
 
     # Notification Policy Write Operations
     async def set_notification_policies(
-        self, policies: Dict[str, Any]
+        self,
+        policies: Dict[str, Any],
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Set the notification policy tree.
 
         Args:
             policies: Notification policy tree configuration (Route object)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the policy tree editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Updated notification policies
         """
-        return await self._put("/v1/provisioning/policies", json_payload=policies)
+        return await self._put(
+            "/v1/provisioning/policies",
+            json_payload=policies,
+            disable_provenance=disable_provenance,
+        )
 
-    async def delete_notification_policies(self) -> Dict[str, Any]:
+    async def delete_notification_policies(
+        self,
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Clear the notification policy tree (reset to defaults).
+
+        Args:
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the policy tree editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Empty dict on success
         """
-        return await self._delete("/v1/provisioning/policies")
+        return await self._delete(
+            "/v1/provisioning/policies",
+            disable_provenance=disable_provenance,
+        )
 
     # Notification Templates
     async def list_notification_templates(self) -> list[Dict[str, Any]]:
@@ -1313,7 +1400,10 @@ class GrafanaConnector:
 
     # Notification Template Write Operations
     async def set_notification_template(
-        self, name: str, template: Dict[str, Any]
+        self,
+        name: str,
+        template: Dict[str, Any],
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Create or update a notification template.
@@ -1321,25 +1411,40 @@ class GrafanaConnector:
         Args:
             name: Name of the template
             template: Template configuration (requires: template field with content)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the template editable in the UI. Defaults to True; set to False to
+                keep Grafana's provisioned behavior.
 
         Returns:
             Created/updated template
         """
         return await self._put(
-            f"/v1/provisioning/templates/{name}", json_payload=template
+            f"/v1/provisioning/templates/{name}",
+            json_payload=template,
+            disable_provenance=disable_provenance,
         )
 
-    async def delete_notification_template(self, name: str) -> Dict[str, Any]:
+    async def delete_notification_template(
+        self,
+        name: str,
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Delete a notification template.
 
         Args:
             name: Name of the template to delete
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                related provisioning resources editable in the UI. Defaults to True;
+                set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Empty dict on success
         """
-        return await self._delete(f"/v1/provisioning/templates/{name}")
+        return await self._delete(
+            f"/v1/provisioning/templates/{name}",
+            disable_provenance=disable_provenance,
+        )
 
     # Mute Timings
     async def list_mute_timings(self) -> list[Dict[str, Any]]:
@@ -1364,22 +1469,34 @@ class GrafanaConnector:
         return await self._get(f"/v1/provisioning/mute-timings/{name}")
 
     # Mute Timing Write Operations
-    async def create_mute_timing(self, mute_timing: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_mute_timing(
+        self,
+        mute_timing: Dict[str, Any],
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Create a new mute timing.
 
         Args:
             mute_timing: Mute timing configuration (requires: name, time_intervals)
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the mute timing editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Created mute timing
         """
         return await self._post(
-            "/v1/provisioning/mute-timings", json_payload=mute_timing
+            "/v1/provisioning/mute-timings",
+            json_payload=mute_timing,
+            disable_provenance=disable_provenance,
         )
 
     async def update_mute_timing(
-        self, name: str, mute_timing: Dict[str, Any]
+        self,
+        name: str,
+        mute_timing: Dict[str, Any],
+        disable_provenance: bool = True,
     ) -> Dict[str, Any]:
         """
         Update an existing mute timing.
@@ -1387,25 +1504,40 @@ class GrafanaConnector:
         Args:
             name: Name of the mute timing to update
             mute_timing: Updated mute timing configuration
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                the mute timing editable in the UI. Defaults to True; set to False
+                to keep Grafana's provisioned behavior.
 
         Returns:
             Updated mute timing
         """
         return await self._put(
-            f"/v1/provisioning/mute-timings/{name}", json_payload=mute_timing
+            f"/v1/provisioning/mute-timings/{name}",
+            json_payload=mute_timing,
+            disable_provenance=disable_provenance,
         )
 
-    async def delete_mute_timing(self, name: str) -> Dict[str, Any]:
+    async def delete_mute_timing(
+        self,
+        name: str,
+        disable_provenance: bool = True,
+    ) -> Dict[str, Any]:
         """
         Delete a mute timing.
 
         Args:
             name: Name of the mute timing to delete
+            disable_provenance: Send `X-Disable-Provenance: true` so Grafana keeps
+                related provisioning resources editable in the UI. Defaults to True;
+                set to False to keep Grafana's provisioned behavior.
 
         Returns:
             Empty dict on success
         """
-        return await self._delete(f"/v1/provisioning/mute-timings/{name}")
+        return await self._delete(
+            f"/v1/provisioning/mute-timings/{name}",
+            disable_provenance=disable_provenance,
+        )
 
     async def list_folder_dashboards(
         self,
