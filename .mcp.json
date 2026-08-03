@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "mcp-read-only-sql": {
-      "command": "uv",
-      "args": ["run", "--", "python", "-m", "src.server", "connections.yaml"],
+    "mcp-read-only-grafana": {
+      "command": "uvx",
+      "args": ["--from", ".", "mcp-read-only-grafana"],
       "env": {}
     }
   }
