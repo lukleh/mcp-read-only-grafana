@@ -16,14 +16,14 @@ import json
 from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
 
 
 def register_admin_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register write-capable MCP tools.
@@ -31,7 +31,7 @@ def register_admin_tools(
     These tools are only registered by the write-capable public command.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer server instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

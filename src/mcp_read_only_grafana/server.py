@@ -12,8 +12,9 @@ from pathlib import Path
 from textwrap import dedent
 from typing import TypeVar
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
+from . import __version__
 from .config import ConfigParser, GrafanaConnection
 from .grafana_connector import GrafanaConnector
 from .runtime_paths import resolve_runtime_paths, RuntimePaths
@@ -142,7 +143,7 @@ class ReloadableMapping(Mapping[str, T]):
 
 
 class ReadOnlyGrafanaServer:
-    """MCP Read-Only Grafana Server using FastMCP."""
+    """MCP Read-Only Grafana Server using MCPServer."""
 
     def __init__(
         self,
@@ -166,7 +167,7 @@ class ReadOnlyGrafanaServer:
             lambda: self._connectors,
         )
 
-        self.mcp = FastMCP(server_name)
+        self.mcp = MCPServer(server_name, version=__version__)
 
         self._load_connections()
         self._register_tools()

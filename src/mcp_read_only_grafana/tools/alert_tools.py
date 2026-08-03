@@ -12,20 +12,20 @@ import json
 from collections.abc import Mapping
 from typing import List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
 
 
 def register_alert_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register alert-related MCP tools.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer server instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

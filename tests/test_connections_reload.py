@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver import Context
+from mcp.server.mcpserver.exceptions import ToolError
 
 import mcp_read_only_grafana.server as server_module
 from mcp_read_only_grafana.runtime_paths import RuntimePaths
@@ -71,10 +72,11 @@ async def call_tool(
     tool_name: str,
     arguments: dict[str, object] | None = None,
 ):
-    """Call a FastMCP tool directly on the in-process server."""
+    """Call an MCPServer tool directly on the in-process server."""
     return await server.mcp._tool_manager.call_tool(
         tool_name,
         arguments or {},
+        Context(mcp_server=server.mcp),
         convert_result=False,
     )
 

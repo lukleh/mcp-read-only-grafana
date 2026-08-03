@@ -1,6 +1,6 @@
 [project]
 name = "mcp-read-only-grafana"
-version = "0.3.1"
+version = "0.4.0"
 description = "MCP server for Grafana with a read-only default and a separate write-capable command"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,12 +20,10 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    # Floor: mcp.server.fastmcp first shipped in 1.2.0, and FastMCP only emits
-    # outputSchema / structured content from 1.10.0 — on older 1.x the server
-    # still starts but silently drops the output schemas its tools declare.
-    # Cap: 2.0.0 removed mcp.server.fastmcp outright. Keep the cap until the
-    # server is ported to the 2.x API.
-    "mcp>=1.10.0,<2",
+    # The server builds on mcp.server.mcpserver (the 2.x successor to FastMCP).
+    # Capped below 3 so the next major SDK rewrite cannot silently break installs
+    # the way 2.0.0 did when it removed mcp.server.fastmcp.
+    "mcp>=2.0.0,<3",
     "pyyaml>=6.0",
     "httpx>=0.24.0",
     "pydantic>=2.0.0",

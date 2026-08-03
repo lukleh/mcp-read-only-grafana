@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-03
+
+### Changed
+
+- Ported the server to the MCP Python SDK 2.x API: `mcp.server.fastmcp.FastMCP` is replaced by `mcp.server.mcpserver.MCPServer` at every import site (`server.py`, all six `tools/*.py` registration modules, and the two test modules that build a server in-process). SDK 2.0.0 removed `mcp.server.fastmcp` with no compatibility shim, so this is the change that unblocks running on 2.x.
+- Raised the SDK dependency from `mcp>=1.10.0,<2` to `mcp>=2.0.0,<3`. The `<3` cap is deliberate: 2.0.0 broke installs by deleting the module this server imported, and the cap keeps the next major SDK rewrite from doing the same thing silently.
+- `serverInfo.version` now reports this package's own version (read from `importlib.metadata` via `mcp_read_only_grafana.__version__`) instead of the MCP SDK version. Under 1.x, FastMCP defaulted this field to the SDK's version (for example `1.27.0`), which misreported the server; SDK 2 defaults it to an empty string, so the real version is now passed explicitly.
+- Test-only adjustment required by the SDK API change: `ToolManager.call_tool()` takes the request `Context` as a required positional argument in 2.x (it was optional in 1.x), so the two tests that call it directly now pass `Context(mcp_server=...)`. Tool behaviour and assertions are unchanged.
+- No change to the exposed tool surface: both entrypoints (`mcp-read-only-grafana`, 29 tools; `mcp-grafana-write`, 57 tools) emit a `tools/list` response byte-identical to the 1.x output, including every input and output schema.
+
 ## [0.3.1] - 2026-08-03
 
 ### Fixed

@@ -11,7 +11,7 @@ import json
 from collections.abc import Mapping
 from typing import Any, Dict, List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
@@ -67,13 +67,13 @@ async def _get_datasource_health_result(
 
 
 def register_datasource_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register datasource-related MCP tools.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer server instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 
