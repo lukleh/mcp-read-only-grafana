@@ -9,7 +9,7 @@ This module provides:
 import json
 from collections.abc import Mapping
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..config import GrafanaConnection
 from ..grafana_connector import GrafanaConnector
@@ -17,14 +17,14 @@ from ..validation import get_connector
 
 
 def register_core_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
     connections: Mapping[str, GrafanaConnection],
 ) -> None:
     """Register core MCP tools for connection management.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
         connections: Dictionary mapping connection names to GrafanaConnection configs
     """

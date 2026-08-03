@@ -4,7 +4,7 @@ import json
 
 import httpx
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import Context, MCPServer
 
 from mcp_read_only_grafana.config import GrafanaConnection
 from mcp_read_only_grafana.grafana_connector import GrafanaConnector
@@ -322,7 +322,7 @@ class FakeTemplateConnector:
 async def test_create_alert_rule_tool_defaults_editable_in_ui_to_true():
     """The MCP tool should default to alerts staying editable in the UI."""
     connector = FakeAlertConnector()
-    mcp = FastMCP("test-admin-tools")
+    mcp = MCPServer("test-admin-tools")
     register_admin_tools(mcp, {"test": connector})
 
     result = await mcp._tool_manager.call_tool(
@@ -331,6 +331,7 @@ async def test_create_alert_rule_tool_defaults_editable_in_ui_to_true():
             "connection_name": "test",
             "rule": {"title": "Example rule"},
         },
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 
@@ -347,7 +348,7 @@ async def test_create_alert_rule_tool_defaults_editable_in_ui_to_true():
 async def test_notification_template_tool_can_opt_out_of_editable_in_ui():
     """The MCP tool should let callers keep Grafana's provisioned behavior."""
     connector = FakeTemplateConnector()
-    mcp = FastMCP("test-admin-tools")
+    mcp = MCPServer("test-admin-tools")
     register_admin_tools(mcp, {"test": connector})
 
     result = await mcp._tool_manager.call_tool(
@@ -358,6 +359,7 @@ async def test_notification_template_tool_can_opt_out_of_editable_in_ui():
             "template": {"template": '{{ define "x" }}ok{{ end }}'},
             "editable_in_ui": False,
         },
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 
@@ -375,7 +377,7 @@ async def test_notification_template_tool_can_opt_out_of_editable_in_ui():
 async def test_create_alert_rule_tool_can_opt_out_of_editable_in_ui():
     """The MCP tool should let callers keep Grafana's provisioned behavior."""
     connector = FakeAlertConnector()
-    mcp = FastMCP("test-admin-tools")
+    mcp = MCPServer("test-admin-tools")
     register_admin_tools(mcp, {"test": connector})
 
     result = await mcp._tool_manager.call_tool(
@@ -385,6 +387,7 @@ async def test_create_alert_rule_tool_can_opt_out_of_editable_in_ui():
             "rule": {"title": "Example rule"},
             "editable_in_ui": False,
         },
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 

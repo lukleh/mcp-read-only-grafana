@@ -11,20 +11,20 @@ import json
 from collections.abc import Mapping
 from typing import List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
 
 
 def register_dashboard_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register dashboard-related MCP tools.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

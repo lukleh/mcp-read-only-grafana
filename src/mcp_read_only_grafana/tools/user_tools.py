@@ -10,7 +10,7 @@ import json
 from collections.abc import Mapping
 from typing import Any, Dict, List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
@@ -38,13 +38,13 @@ async def _get_current_user_result(connector: GrafanaConnector) -> Dict[str, Any
 
 
 def register_user_tools(
-    mcp: FastMCP,
+    mcp: MCPServer,
     connectors: Mapping[str, GrafanaConnector],
 ) -> None:
     """Register user-related MCP tools.
 
     Args:
-        mcp: FastMCP server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 
