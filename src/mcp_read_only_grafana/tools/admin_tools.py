@@ -14,7 +14,7 @@ Includes:
 
 import json
 from collections.abc import Mapping
-from typing import Any, Dict, Optional
+from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
@@ -252,10 +252,10 @@ def register_admin_tools(
     @mcp.tool()
     async def save_dashboard(
         connection_name: str,
-        dashboard: Dict[str, Any],
-        folder_uid: Optional[str] = None,
-        folder_id: Optional[int] = None,
-        message: Optional[str] = None,
+        dashboard: dict[str, Any],
+        folder_uid: str | None = None,
+        folder_id: int | None = None,
+        message: str | None = None,
         overwrite: bool = False,
     ) -> str:
         """
@@ -295,8 +295,8 @@ def register_admin_tools(
     async def create_folder(
         connection_name: str,
         title: str,
-        uid: Optional[str] = None,
-        parent_uid: Optional[str] = None,
+        uid: str | None = None,
+        parent_uid: str | None = None,
     ) -> str:
         """
         [WRITE] Create a new folder in Grafana.
@@ -326,7 +326,7 @@ def register_admin_tools(
     @mcp.tool()
     async def create_alert_rule(
         connection_name: str,
-        rule: Dict[str, Any],
+        rule: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -353,7 +353,7 @@ def register_admin_tools(
     async def update_alert_rule(
         connection_name: str,
         alert_uid: str,
-        rule: Dict[str, Any],
+        rule: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -408,7 +408,7 @@ def register_admin_tools(
         connection_name: str,
         folder_uid: str,
         group: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -442,7 +442,7 @@ def register_admin_tools(
     @mcp.tool()
     async def create_contact_point(
         connection_name: str,
-        contact_point: Dict[str, Any],
+        contact_point: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -468,7 +468,7 @@ def register_admin_tools(
     async def update_contact_point(
         connection_name: str,
         uid: str,
-        contact_point: Dict[str, Any],
+        contact_point: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -525,7 +525,7 @@ def register_admin_tools(
     @mcp.tool()
     async def set_notification_policies(
         connection_name: str,
-        policies: Dict[str, Any],
+        policies: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -578,7 +578,7 @@ def register_admin_tools(
     @mcp.tool()
     async def create_mute_timing(
         connection_name: str,
-        mute_timing: Dict[str, Any],
+        mute_timing: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -604,7 +604,7 @@ def register_admin_tools(
     async def update_mute_timing(
         connection_name: str,
         name: str,
-        mute_timing: Dict[str, Any],
+        mute_timing: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """
@@ -662,7 +662,7 @@ def register_admin_tools(
     async def set_notification_template(
         connection_name: str,
         name: str,
-        template: Dict[str, Any],
+        template: dict[str, Any],
         editable_in_ui: bool = True,
     ) -> str:
         """

@@ -4,8 +4,8 @@ import httpx
 import pytest
 
 from mcp_read_only_grafana.config import GrafanaConnection
-from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 from mcp_read_only_grafana.exceptions import GrafanaAPIError, PermissionDeniedError
+from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 
 
 def create_mock_connector(connection, handler):

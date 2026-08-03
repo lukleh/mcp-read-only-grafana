@@ -1,11 +1,15 @@
-import httpx
 import logging
-from typing import Any, Dict, Iterable, NoReturn
+from collections.abc import Iterable
+from typing import Any, NoReturn
 from urllib.parse import unquote
+
+import httpx
+
 from .config import GrafanaConnection
 from .exceptions import (
     AuthenticationError,
     GrafanaAPIError,
+    GrafanaError,
     GrafanaTimeoutError,
     PermissionDeniedError,
 )
@@ -93,7 +97,7 @@ class GrafanaConnector:
 
     @staticmethod
     def _validate_requested_fields(
-        records: Iterable[Dict[str, Any]],
+        records: Iterable[dict[str, Any]],
         requested_fields: Iterable[str] | None = None,
         allowed_fields: Iterable[str] | None = None,
     ) -> None:
@@ -122,9 +126,9 @@ class GrafanaConnector:
 
     @staticmethod
     def _filter_fields(
-        record: Dict[str, Any],
+        record: dict[str, Any],
         requested_fields: Iterable[str] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Project a record to the requested subset of fields.
 
@@ -252,7 +256,7 @@ class GrafanaConnector:
     async def _post(
         self,
         endpoint: str,
-        json_payload: Dict[str, Any] | None = None,
+        json_payload: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         disable_provenance: bool | None = None,
     ) -> Any:
@@ -278,7 +282,7 @@ class GrafanaConnector:
     async def _put(
         self,
         endpoint: str,
-        json_payload: Dict[str, Any] | None = None,
+        json_payload: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         disable_provenance: bool | None = None,
     ) -> Any:
@@ -366,7 +370,7 @@ class GrafanaConnector:
 
                         break
 
-    async def get_health(self) -> Dict[str, Any]:
+    async def get_health(self) -> dict[str, Any]:
         """Get Grafana instance health status"""
         health_data = await self._get("/health")
         # Also get version info
@@ -386,7 +390,7 @@ class GrafanaConnector:
         limit: int | None = None,
         page: int | None = None,
         fields: list[str] | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for dashboards by name or tag"""
         params: dict[str, Any] = {"type": "dash-db"}
         if query:
@@ -407,7 +411,7 @@ class GrafanaConnector:
 
         return records
 
-    async def get_dashboard(self, dashboard_uid: str) -> Dict[str, Any]:
+    async def get_dashboard(self, dashboard_uid: str) -> dict[str, Any]:
         """Get full dashboard definition by UID"""
         result = await self._get(f"/dashboards/uid/{dashboard_uid}")
 
@@ -440,12 +444,12 @@ class GrafanaConnector:
 
     async def save_dashboard(
         self,
-        dashboard: Dict[str, Any],
+        dashboard: dict[str, Any],
         folder_uid: str | None = None,
         folder_id: int | None = None,
         message: str | None = None,
         overwrite: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create or update a dashboard via Grafana's dashboard save API.
 
@@ -494,7 +498,7 @@ class GrafanaConnector:
                         if live_folder_id is not None:
                             folder_id = live_folder_id
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "dashboard": payload_dashboard,
             "overwrite": overwrite,
         }
@@ -507,7 +511,7 @@ class GrafanaConnector:
 
         return await self._post("/dashboards/db", json_payload=payload)
 
-    async def list_folders(self) -> list[Dict[str, Any]]:
+    async def list_folders(self) -> list[dict[str, Any]]:
         """List all folders in Grafana"""
         folders = await self._get("/folders")
 
@@ -531,7 +535,7 @@ class GrafanaConnector:
 
     async def create_folder(
         self, title: str, uid: str | None = None, parent_uid: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new folder in Grafana.
 
@@ -543,7 +547,7 @@ class GrafanaConnector:
         Returns:
             Dict with created folder details (uid, title, url, etc.)
         """
-        payload: Dict[str, Any] = {"title": title}
+        payload: dict[str, Any] = {"title": title}
         if uid:
             payload["uid"] = uid
         if parent_uid:
@@ -551,7 +555,7 @@ class GrafanaConnector:
 
         return await self._post("/folders", json_payload=payload)
 
-    async def list_datasources(self) -> list[Dict[str, Any]]:
+    async def list_datasources(self) -> list[dict[str, Any]]:
         """List all configured data sources"""
         datasources = await self._get("/datasources")
 
@@ -573,11 +577,11 @@ class GrafanaConnector:
 
         return formatted_sources
 
-    async def get_datasource_health(self, datasource_uid: str) -> Dict[str, Any]:
+    async def get_datasource_health(self, datasource_uid: str) -> dict[str, Any]:
         """Check the health of a specific datasource"""
         return await self._get(f"/datasources/uid/{datasource_uid}/health")
 
-    async def list_alerts(self, folder_uid: str | None = None) -> list[Dict[str, Any]]:
+    async def list_alerts(self, folder_uid: str | None = None) -> list[dict[str, Any]]:
         """List alert rules, optionally filtered by folder"""
         # Get alert rules from the new unified alerting API
         try:
@@ -632,7 +636,7 @@ class GrafanaConnector:
             namespaces.add(title)
         return namespaces
 
-    async def _list_legacy_alerts(self) -> list[Dict[str, Any]]:
+    async def _list_legacy_alerts(self) -> list[dict[str, Any]]:
         """List legacy alert rules (for older Grafana versions)"""
         try:
             alerts = await self._get("/alerts")
@@ -656,7 +660,7 @@ class GrafanaConnector:
         except Exception:
             return []
 
-    async def get_dashboard_info(self, dashboard_uid: str) -> Dict[str, Any]:
+    async def get_dashboard_info(self, dashboard_uid: str) -> dict[str, Any]:
         """Get lightweight dashboard metadata without full panel definitions"""
         result = await self._get(f"/dashboards/uid/{dashboard_uid}")
 
@@ -707,7 +711,7 @@ class GrafanaConnector:
 
     async def get_dashboard_panel(
         self, dashboard_uid: str, panel_id: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get full details for a single panel from a dashboard"""
         result = await self._get(f"/dashboards/uid/{dashboard_uid}")
         dashboard = result.get("dashboard", {})
@@ -717,11 +721,14 @@ class GrafanaConnector:
             if panel.get("id") == panel_id:
                 return panel
 
-        raise Exception(
+        # GrafanaError with the same message keeps the client-visible output
+        # identical: the MCP framework serializes unhandled tool exceptions
+        # as str(e) only, so the exception type is not observable.
+        raise GrafanaError(
             f"Panel with id {panel_id} not found in dashboard {dashboard_uid}"
         )
 
-    async def get_dashboard_panels(self, dashboard_uid: str) -> list[Dict[str, Any]]:
+    async def get_dashboard_panels(self, dashboard_uid: str) -> list[dict[str, Any]]:
         """Get simplified panel information from a dashboard"""
         dashboard = await self.get_dashboard(dashboard_uid)
         panels = []
@@ -747,7 +754,7 @@ class GrafanaConnector:
         time_from: str | None = None,
         time_to: str | None = None,
         step: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a PromQL query against a Prometheus datasource"""
         # Build query parameters
         params = {
@@ -779,7 +786,7 @@ class GrafanaConnector:
         time_from: str | None = None,
         time_to: str | None = None,
         limit: int | None = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a LogQL query against a Loki datasource"""
         # Build query parameters
         params = {
@@ -801,18 +808,18 @@ class GrafanaConnector:
 
     async def explore_query(
         self,
-        queries: list[Dict[str, Any]],
+        queries: list[dict[str, Any]],
         range_from: str | None = None,
         range_to: str | None = None,
         max_data_points: int | None = None,
         interval_ms: int | None = None,
-        additional_options: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+        additional_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Execute a Grafana Explore query via /api/ds/query"""
         if not queries:
             raise ValueError("queries must contain at least one query definition")
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "queries": queries,
         }
 
@@ -836,15 +843,15 @@ class GrafanaConnector:
 
         return await self._post("/ds/query", json_payload=payload)
 
-    async def get_current_org(self) -> Dict[str, Any]:
+    async def get_current_org(self) -> dict[str, Any]:
         """Get current organization information"""
         return await self._get("/org")
 
-    async def get_current_user(self) -> Dict[str, Any]:
+    async def get_current_user(self) -> dict[str, Any]:
         """Get the currently authenticated user profile"""
         return await self._get("/user")
 
-    async def get_user_permissions(self) -> Dict[str, Any]:
+    async def get_user_permissions(self) -> dict[str, Any]:
         """
         Get the current user's permissions.
 
@@ -864,9 +871,9 @@ class GrafanaConnector:
         page: int | None = None,
         per_page: int | None = None,
         fields: list[str] | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List all users in the current organization"""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if page is not None:
             params["page"] = page
         if per_page is not None:
@@ -886,9 +893,9 @@ class GrafanaConnector:
         page: int | None = None,
         per_page: int | None = None,
         fields: list[str] | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List all teams in the organization"""
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if page is not None:
             params["page"] = page
         if per_page is not None:
@@ -904,7 +911,7 @@ class GrafanaConnector:
 
         return records
 
-    async def get_alert_rule_by_uid(self, alert_uid: str) -> Dict[str, Any]:
+    async def get_alert_rule_by_uid(self, alert_uid: str) -> dict[str, Any]:
         """Get detailed information about a specific alert rule"""
         # Grafana's Ruler API exposes rules by namespace/group, so UID lookups
         # need to scan the aggregated payload and match locally.
@@ -930,7 +937,7 @@ class GrafanaConnector:
         )
 
     # Ruler API endpoints (non-admin)
-    async def get_ruler_rules(self) -> Dict[str, Any]:
+    async def get_ruler_rules(self) -> dict[str, Any]:
         """
         Get all alert rules from the Ruler API.
 
@@ -942,7 +949,7 @@ class GrafanaConnector:
         """
         return await self._get("/ruler/grafana/api/v1/rules")
 
-    async def get_ruler_namespace_rules(self, namespace: str) -> Dict[str, Any]:
+    async def get_ruler_namespace_rules(self, namespace: str) -> dict[str, Any]:
         """
         Get all rule groups for a specific namespace (folder).
 
@@ -954,7 +961,7 @@ class GrafanaConnector:
         """
         return await self._get(f"/ruler/grafana/api/v1/rules/{namespace}")
 
-    async def get_ruler_group(self, namespace: str, group_name: str) -> Dict[str, Any]:
+    async def get_ruler_group(self, namespace: str, group_name: str) -> dict[str, Any]:
         """
         Get a specific alert rule group from a namespace.
 
@@ -972,7 +979,7 @@ class GrafanaConnector:
         self,
         state: str | None = None,
         rule_name: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get all alert rules with their current evaluation state.
 
@@ -988,7 +995,7 @@ class GrafanaConnector:
             Dict with 'status' and 'data' containing groups organized by namespace,
             each rule including its current state, health, and evaluation info.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if state:
             params["state"] = state
         if rule_name:
@@ -1002,7 +1009,7 @@ class GrafanaConnector:
         silenced: bool | None = None,
         inhibited: bool | None = None,
         active: bool | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get currently firing alert instances from Alertmanager.
 
@@ -1018,7 +1025,7 @@ class GrafanaConnector:
         Returns:
             List of firing alert instances with labels, annotations, startsAt, etc.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if filter_labels:
             params["filter"] = filter_labels
         if silenced is not None:
@@ -1033,11 +1040,11 @@ class GrafanaConnector:
     async def get_alert_state_history(
         self,
         rule_uid: str | None = None,
-        labels: Dict[str, str] | None = None,
+        labels: dict[str, str] | None = None,
         from_time: str | None = None,
         to_time: str | None = None,
         limit: int | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get alert state transition history.
 
@@ -1054,7 +1061,7 @@ class GrafanaConnector:
         Returns:
             Dict containing state history entries with timestamps and state transitions.
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if rule_uid:
             params["ruleUID"] = rule_uid
         if labels:
@@ -1070,7 +1077,7 @@ class GrafanaConnector:
 
         return await self._get("/v1/rules/history", **params)
 
-    async def list_provisioned_alert_rules(self) -> list[Dict[str, Any]]:
+    async def list_provisioned_alert_rules(self) -> list[dict[str, Any]]:
         """
         Fetch all alert rules from the provisioning API.
 
@@ -1079,7 +1086,7 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/alert-rules")
 
-    async def get_provisioned_alert_rule(self, alert_uid: str) -> Dict[str, Any]:
+    async def get_provisioned_alert_rule(self, alert_uid: str) -> dict[str, Any]:
         """
         Get a specific alert rule by UID from the provisioning API.
 
@@ -1091,7 +1098,7 @@ class GrafanaConnector:
         """
         return await self._get(f"/v1/provisioning/alert-rules/{alert_uid}")
 
-    async def export_alert_rule(self, alert_uid: str) -> Dict[str, Any]:
+    async def export_alert_rule(self, alert_uid: str) -> dict[str, Any]:
         """
         Export a specific alert rule in provisioning format.
 
@@ -1103,7 +1110,7 @@ class GrafanaConnector:
         """
         return await self._get(f"/v1/provisioning/alert-rules/{alert_uid}/export")
 
-    async def export_all_alert_rules(self) -> Dict[str, Any]:
+    async def export_all_alert_rules(self) -> dict[str, Any]:
         """
         Export all alert rules in provisioning format.
 
@@ -1112,7 +1119,7 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/alert-rules/export")
 
-    async def get_rule_group(self, folder_uid: str, group: str) -> Dict[str, Any]:
+    async def get_rule_group(self, folder_uid: str, group: str) -> dict[str, Any]:
         """
         Get a specific alert rule group.
 
@@ -1127,7 +1134,7 @@ class GrafanaConnector:
             f"/v1/provisioning/folder/{folder_uid}/rule-groups/{group}"
         )
 
-    async def export_rule_group(self, folder_uid: str, group: str) -> Dict[str, Any]:
+    async def export_rule_group(self, folder_uid: str, group: str) -> dict[str, Any]:
         """
         Export a specific rule group in provisioning format.
 
@@ -1145,9 +1152,9 @@ class GrafanaConnector:
     # Alert Rule Write Operations
     async def create_alert_rule(
         self,
-        rule: Dict[str, Any],
+        rule: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new alert rule.
 
@@ -1170,9 +1177,9 @@ class GrafanaConnector:
     async def update_alert_rule(
         self,
         alert_uid: str,
-        rule: Dict[str, Any],
+        rule: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update an existing alert rule.
 
@@ -1196,7 +1203,7 @@ class GrafanaConnector:
         self,
         alert_uid: str,
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete an alert rule.
 
@@ -1218,9 +1225,9 @@ class GrafanaConnector:
         self,
         folder_uid: str,
         group: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update a rule group's configuration (interval, rules).
 
@@ -1242,7 +1249,7 @@ class GrafanaConnector:
         )
 
     # Contact Points
-    async def list_contact_points(self) -> list[Dict[str, Any]]:
+    async def list_contact_points(self) -> list[dict[str, Any]]:
         """
         Get all contact points.
 
@@ -1254,9 +1261,9 @@ class GrafanaConnector:
     # Contact Point Write Operations
     async def create_contact_point(
         self,
-        contact_point: Dict[str, Any],
+        contact_point: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new contact point.
 
@@ -1278,9 +1285,9 @@ class GrafanaConnector:
     async def update_contact_point(
         self,
         uid: str,
-        contact_point: Dict[str, Any],
+        contact_point: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update an existing contact point.
 
@@ -1304,7 +1311,7 @@ class GrafanaConnector:
         self,
         uid: str,
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete a contact point.
 
@@ -1323,7 +1330,7 @@ class GrafanaConnector:
         )
 
     # Notification Policies
-    async def get_notification_policies(self) -> Dict[str, Any]:
+    async def get_notification_policies(self) -> dict[str, Any]:
         """
         Get the notification policy tree.
 
@@ -1335,9 +1342,9 @@ class GrafanaConnector:
     # Notification Policy Write Operations
     async def set_notification_policies(
         self,
-        policies: Dict[str, Any],
+        policies: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Set the notification policy tree.
 
@@ -1359,7 +1366,7 @@ class GrafanaConnector:
     async def delete_notification_policies(
         self,
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Clear the notification policy tree (reset to defaults).
 
@@ -1377,7 +1384,7 @@ class GrafanaConnector:
         )
 
     # Notification Templates
-    async def list_notification_templates(self) -> list[Dict[str, Any]]:
+    async def list_notification_templates(self) -> list[dict[str, Any]]:
         """
         Get all notification templates.
 
@@ -1386,7 +1393,7 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/templates")
 
-    async def get_notification_template(self, name: str) -> Dict[str, Any]:
+    async def get_notification_template(self, name: str) -> dict[str, Any]:
         """
         Get a specific notification template by name.
 
@@ -1402,9 +1409,9 @@ class GrafanaConnector:
     async def set_notification_template(
         self,
         name: str,
-        template: Dict[str, Any],
+        template: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create or update a notification template.
 
@@ -1428,7 +1435,7 @@ class GrafanaConnector:
         self,
         name: str,
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete a notification template.
 
@@ -1447,7 +1454,7 @@ class GrafanaConnector:
         )
 
     # Mute Timings
-    async def list_mute_timings(self) -> list[Dict[str, Any]]:
+    async def list_mute_timings(self) -> list[dict[str, Any]]:
         """
         Get all mute timings.
 
@@ -1456,7 +1463,7 @@ class GrafanaConnector:
         """
         return await self._get("/v1/provisioning/mute-timings")
 
-    async def get_mute_timing(self, name: str) -> Dict[str, Any]:
+    async def get_mute_timing(self, name: str) -> dict[str, Any]:
         """
         Get a specific mute timing by name.
 
@@ -1471,9 +1478,9 @@ class GrafanaConnector:
     # Mute Timing Write Operations
     async def create_mute_timing(
         self,
-        mute_timing: Dict[str, Any],
+        mute_timing: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new mute timing.
 
@@ -1495,9 +1502,9 @@ class GrafanaConnector:
     async def update_mute_timing(
         self,
         name: str,
-        mute_timing: Dict[str, Any],
+        mute_timing: dict[str, Any],
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update an existing mute timing.
 
@@ -1521,7 +1528,7 @@ class GrafanaConnector:
         self,
         name: str,
         disable_provenance: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete a mute timing.
 
@@ -1545,7 +1552,7 @@ class GrafanaConnector:
         limit: int | None = None,
         page: int | None = None,
         fields: list[str] | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List all dashboards in a specific folder"""
         params: dict[str, Any] = {
             "type": "dash-db",
@@ -1572,7 +1579,7 @@ class GrafanaConnector:
         time_to: str | None = None,
         dashboard_id: int | None = None,
         tags: list[str] | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List annotations for a time range"""
         params = {}
 
@@ -1604,7 +1611,7 @@ class GrafanaConnector:
 
         return formatted_annotations
 
-    async def get_dashboard_versions(self, dashboard_uid: str) -> list[Dict[str, Any]]:
+    async def get_dashboard_versions(self, dashboard_uid: str) -> list[dict[str, Any]]:
         """Get version history of a dashboard"""
         versions = await self._get(f"/dashboards/uid/{dashboard_uid}/versions")
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """CLI bootstrap for the Grafana MCP server package."""
 
 import argparse
@@ -17,7 +16,7 @@ from mcp.server.mcpserver import MCPServer
 from . import __version__
 from .config import ConfigParser, GrafanaConnection
 from .grafana_connector import GrafanaConnector
-from .runtime_paths import resolve_runtime_paths, RuntimePaths
+from .runtime_paths import RuntimePaths, resolve_runtime_paths
 from .tools import (
     register_admin_tools,
     register_alert_tools,

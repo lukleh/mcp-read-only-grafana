@@ -8,7 +8,7 @@ This module provides tools for:
 
 import json
 from collections.abc import Mapping
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
@@ -17,7 +17,7 @@ from ..grafana_connector import GrafanaConnector
 from ..validation import get_connector
 
 
-async def _get_current_user_result(connector: GrafanaConnector) -> Dict[str, Any]:
+async def _get_current_user_result(connector: GrafanaConnector) -> dict[str, Any]:
     """Return the current user profile or a structured auth-mode explanation."""
     try:
         return await connector.get_current_user()
@@ -94,9 +94,9 @@ def register_user_tools(
     @mcp.tool()
     async def list_users(
         connection_name: str,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
+        page: int | None = None,
+        per_page: int | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """
         List all users in the current organization.
@@ -117,9 +117,9 @@ def register_user_tools(
     @mcp.tool()
     async def list_teams(
         connection_name: str,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
+        page: int | None = None,
+        per_page: int | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """
         List all teams in the organization.
@@ -140,10 +140,10 @@ def register_user_tools(
     @mcp.tool()
     async def list_annotations(
         connection_name: str,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        dashboard_id: Optional[int] = None,
-        tags: Optional[List[str]] = None,
+        time_from: str | None = None,
+        time_to: str | None = None,
+        dashboard_id: int | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """
         List annotations for a time range.
