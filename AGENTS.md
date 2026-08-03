@@ -12,7 +12,7 @@
 - `uv run pytest -q` runs the full test suite.
 - `uv run pytest tests/test_server.py -q` is a fast focused iteration loop.
 - `RUN_WRITE_TESTS=1 uv run pytest tests/test_integration_all_endpoints.py -v -m integration` runs the write-capable integration coverage.
-- `uv run ruff check src/mcp_read_only_grafana tests` lints, `uv run black src/mcp_read_only_grafana tests` formats, and `uv run ty check` type-checks `src/`.
+- `uv run ruff check src/mcp_read_only_grafana tests` lints and `uv run ty check` type-checks `src/`.
 
 ## Coding Style & Naming Conventions
 Target Python 3.11+ with four-space indentation, explicit type hints, and concise docstrings when behavior is not obvious. Use `snake_case` for modules, functions, tests, and config keys; use `PascalCase` for classes and Pydantic models. Keep domain logic in the existing tool modules rather than collapsing it back into `server.py`, and preserve the shared connector and validation helpers instead of duplicating request or auth checks.

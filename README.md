@@ -824,7 +824,6 @@ just test-connection  # Test Grafana connections
 just run              # Run the server
 just lint             # Run linter
 just lint-fix         # Auto-fix linting issues
-just format           # Format code
 just test             # Run tests
 ```
 
@@ -839,10 +838,8 @@ uv run pytest
 ### Code Formatting
 
 ```bash
-just format
 just lint
 # or
-uv run black src/mcp_read_only_grafana/
 uv run ruff check src/mcp_read_only_grafana/ tests/
 uv run mcp-read-only-grafana validate-config
 uv run mcp-read-only-grafana test-connection

@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Dev tooling: pinned the ruff rule set explicitly (`select = ["E4", "E7",
+  "E9", "F"]`, the implicit defaults of the locked ruff 0.15.10) so a future
+  relock to ruff 0.16+ — which widened the implicit defaults — cannot change
+  lint coverage silently, and removed the unused `black` dev dependency (it
+  was enforced nowhere and the tree was not black-clean).
+
 ## [0.4.0] - 2026-08-03
 
 ### Changed

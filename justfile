@@ -44,10 +44,6 @@ lint:
 lint-fix:
     uv run ruff check --fix src/mcp_read_only_grafana/ tests/
 
-# Format code
-format:
-    uv run black src/mcp_read_only_grafana/ tests/
-
 # Run tests
 test:
     uv run pytest -q
