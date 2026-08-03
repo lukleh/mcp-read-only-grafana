@@ -9,11 +9,25 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Dev tooling: pinned the ruff rule set explicitly (`select = ["E4", "E7",
-  "E9", "F"]`, the implicit defaults of the locked ruff 0.15.10) so a future
-  relock to ruff 0.16+ — which widened the implicit defaults — cannot change
-  lint coverage silently, and removed the unused `black` dev dependency (it
-  was enforced nowhere and the tree was not black-clean).
+- Dev tooling: upgraded ruff to 0.16 and adopted its widened implicit default
+  rule set (UP, I, BLE, SIM, DTZ, ... on top of the old E4/E7/E9/F). The dev
+  extra now pins `ruff>=0.16,<0.17` so a routine relock cannot change the
+  implicit rule set silently; bumping the cap is a deliberate change. Two
+  documented opt-outs in `[tool.ruff.lint] ignore`: `BLE001` (broad
+  `except Exception` at MCP tool boundaries is the documented design — the
+  framework converts propagated exceptions to error responses) and `TRY004`
+  (raised exception types are observable API behavior, out of scope for
+  linting). Also removed the unused `black` dev dependency (it was enforced
+  nowhere and the tree was not black-clean).
+- Code modernized to satisfy the new defaults, with no behavior change:
+  PEP 585/604 annotations (`Dict[...]`→`dict[...]`, `Optional[X]`→`X | None`),
+  import sorting, removal of stray shebangs from package modules that are only
+  run via console-script entry points, and the panel-not-found error in
+  `get_dashboard_panel` now raises `GrafanaError` instead of bare `Exception`
+  with an identical message (the MCP framework serializes only `str(e)`, so
+  client-visible output is unchanged). Verified: `tools/list` output for both
+  entrypoints is byte-identical to the previous commit (29 and 57 tools,
+  including all input/output schemas).
 
 ## [0.4.0] - 2026-08-03
 

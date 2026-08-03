@@ -40,7 +40,9 @@ dev = [
     "pytest>=7.0.0",
     "pytest-timeout>=2.2.0",
     "pytest-asyncio>=0.21.0",
-    "ruff>=0.1.0",
+    # Capped to one minor so a routine relock cannot change ruff's implicit
+    # default rule set; bumping the cap is a deliberate change.
+    "ruff>=0.16,<0.17",
     "ty>=0.0.28",
     "vulture>=2.16",
 ]
@@ -57,12 +59,19 @@ mcp-grafana-write = "mcp_read_only_grafana.server:main_write"
 packages = ["src/mcp_read_only_grafana"]
 
 [tool.ruff.lint]
-# State the rule set explicitly. uv.lock currently pins ruff 0.15.10, whose
-# implicit defaults are exactly this set; ruff 0.16 widened the implicit
-# defaults (UP, I, BLE, SIM, DTZ, ...), so without this section a routine
-# relock would change lint coverage silently and flag unchanged code.
-# Widening the set is a deliberate, separate change.
-select = ["E4", "E7", "E9", "F"]
+# The rule set is ruff 0.16's implicit defaults (UP, I, BLE, SIM, DTZ, ...
+# on top of the old E4/E7/E9/F). The dev-extra pin `ruff>=0.16,<0.17` keeps
+# those defaults deterministic across relocks; the opt-outs below are
+# deliberate, documented exceptions.
+ignore = [
+    # Broad `except Exception` at MCP tool boundaries is the documented
+    # design: exceptions propagate to the framework, which converts them to
+    # proper error responses (see CLAUDE.md "Error Handling Pattern").
+    "BLE001",
+    # The exception types raised (and their messages) are observable API
+    # behavior for MCP clients; changing them is out of scope for linting.
+    "TRY004",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
