@@ -73,10 +73,14 @@ async def call_tool(
     arguments: dict[str, object] | None = None,
 ):
     """Call an MCPServer tool directly on the in-process server."""
+    # SDK 2 made the tool context a required argument on the tool manager. Build
+    # it exactly the way MCPServer.call_tool does; the public wrapper is not
+    # usable here because it forces convert_result=True and these tests assert
+    # on the tools' raw return values.
     return await server.mcp._tool_manager.call_tool(
         tool_name,
         arguments or {},
-        Context(mcp_server=server.mcp),
+        Context(mcp_server=server.mcp, subscriptions=server.mcp._subscriptions),
         convert_result=False,
     )
 

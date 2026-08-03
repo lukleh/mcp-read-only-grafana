@@ -331,7 +331,7 @@ async def test_create_alert_rule_tool_defaults_editable_in_ui_to_true():
             "connection_name": "test",
             "rule": {"title": "Example rule"},
         },
-        Context(mcp_server=mcp),
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 
@@ -359,7 +359,7 @@ async def test_notification_template_tool_can_opt_out_of_editable_in_ui():
             "template": {"template": '{{ define "x" }}ok{{ end }}'},
             "editable_in_ui": False,
         },
-        Context(mcp_server=mcp),
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 
@@ -387,7 +387,7 @@ async def test_create_alert_rule_tool_can_opt_out_of_editable_in_ui():
             "rule": {"title": "Example rule"},
             "editable_in_ui": False,
         },
-        Context(mcp_server=mcp),
+        Context(mcp_server=mcp, subscriptions=mcp._subscriptions),
         convert_result=False,
     )
 

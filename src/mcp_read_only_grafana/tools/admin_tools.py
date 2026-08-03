@@ -31,7 +31,7 @@ def register_admin_tools(
     These tools are only registered by the write-capable public command.
 
     Args:
-        mcp: MCPServer server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

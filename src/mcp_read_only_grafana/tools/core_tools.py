@@ -24,7 +24,7 @@ def register_core_tools(
     """Register core MCP tools for connection management.
 
     Args:
-        mcp: MCPServer server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
         connections: Dictionary mapping connection names to GrafanaConnection configs
     """

@@ -73,7 +73,7 @@ def register_datasource_tools(
     """Register datasource-related MCP tools.
 
     Args:
-        mcp: MCPServer server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

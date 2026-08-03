@@ -44,7 +44,7 @@ def register_user_tools(
     """Register user-related MCP tools.
 
     Args:
-        mcp: MCPServer server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 

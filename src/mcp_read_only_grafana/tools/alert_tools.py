@@ -25,7 +25,7 @@ def register_alert_tools(
     """Register alert-related MCP tools.
 
     Args:
-        mcp: MCPServer server instance
+        mcp: MCPServer instance
         connectors: Dictionary mapping connection names to GrafanaConnector instances
     """
 
