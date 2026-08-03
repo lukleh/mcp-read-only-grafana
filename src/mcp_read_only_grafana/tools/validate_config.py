@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate Grafana connections configuration."""
 
 import sys

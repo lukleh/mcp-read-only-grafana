@@ -109,7 +109,7 @@ def test_state_file_overrides_yaml_session_token(tmp_path):
     parser = ConfigParser(
         config_dir / "connections.yaml",
         state_path=state_dir / "session_tokens.json",
-        runtime_env_provider=lambda: {},
+        runtime_env_provider=dict,
     )
 
     [connection] = parser.load_config()

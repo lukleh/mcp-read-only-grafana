@@ -10,7 +10,6 @@ This module provides tools for:
 
 import json
 from collections.abc import Mapping
-from typing import List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
@@ -31,7 +30,7 @@ def register_alert_tools(
 
     @mcp.tool()
     async def list_alerts(
-        connection_name: str, folder_uid: Optional[str] = None
+        connection_name: str, folder_uid: str | None = None
     ) -> str:
         """
         List alert rules, optionally filtered by folder.
@@ -120,8 +119,8 @@ def register_alert_tools(
     @mcp.tool()
     async def get_alert_rules_with_state(
         connection_name: str,
-        state: Optional[str] = None,
-        rule_name: Optional[str] = None,
+        state: str | None = None,
+        rule_name: str | None = None,
     ) -> str:
         """
         Get all alert rules with their current evaluation state.
@@ -145,10 +144,10 @@ def register_alert_tools(
     @mcp.tool()
     async def get_firing_alerts(
         connection_name: str,
-        filter_labels: Optional[List[str]] = None,
-        silenced: Optional[bool] = None,
-        inhibited: Optional[bool] = None,
-        active: Optional[bool] = None,
+        filter_labels: list[str] | None = None,
+        silenced: bool | None = None,
+        inhibited: bool | None = None,
+        active: bool | None = None,
     ) -> str:
         """
         Get currently firing alert instances from Alertmanager.
@@ -178,11 +177,11 @@ def register_alert_tools(
     @mcp.tool()
     async def get_alert_state_history(
         connection_name: str,
-        rule_uid: Optional[str] = None,
-        labels: Optional[dict[str, str]] = None,
-        from_time: Optional[str] = None,
-        to_time: Optional[str] = None,
-        limit: Optional[int] = None,
+        rule_uid: str | None = None,
+        labels: dict[str, str] | None = None,
+        from_time: str | None = None,
+        to_time: str | None = None,
+        limit: int | None = None,
     ) -> str:
         """
         Get alert state transition history.

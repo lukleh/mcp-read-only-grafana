@@ -1,8 +1,10 @@
 """Tests for configuration parsing"""
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from mcp_read_only_grafana.config import ConfigParser, GrafanaConnection
 
 
@@ -162,7 +164,7 @@ def test_config_parser_yaml_credentials_without_env():
         config_path = f.name
 
     try:
-        parser = ConfigParser(config_path, runtime_env_provider=lambda: {})
+        parser = ConfigParser(config_path, runtime_env_provider=dict)
         [conn] = parser.load_config()
 
         assert conn.session_token == "yaml_session_token"

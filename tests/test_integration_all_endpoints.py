@@ -22,7 +22,9 @@ See CLAUDE.md for detailed test configuration and admin test documentation.
 
 import functools
 import os
+
 import pytest
+
 from mcp_read_only_grafana.config import ConfigParser
 from mcp_read_only_grafana.grafana_connector import GrafanaConnector
 

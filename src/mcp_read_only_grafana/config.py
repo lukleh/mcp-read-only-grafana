@@ -1,6 +1,6 @@
+import json
 import os
 import tempfile
-import json
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -89,7 +89,9 @@ class GrafanaConnection(BaseModel):
         default_factory=lambda: _copy_runtime_env
     )
 
-    def model_post_init(self, __context: Any) -> None:
+    # The dunder-named positional parameter is pydantic's documented
+    # model_post_init hook signature; keep it rather than restyle it.
+    def model_post_init(self, __context: Any) -> None:  # noqa: PYI063
         """Preserve credentials explicitly declared in the YAML config."""
         self._configured_session_token = self.session_token
         self._configured_api_key = self.api_key

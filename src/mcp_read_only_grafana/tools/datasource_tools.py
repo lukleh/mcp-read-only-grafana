@@ -9,7 +9,7 @@ This module provides tools for:
 
 import json
 from collections.abc import Mapping
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
@@ -21,7 +21,7 @@ from ..validation import get_connector
 async def _get_datasource_health_result(
     connector: GrafanaConnector,
     datasource_uid: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return datasource health or a structured explanation for unsupported cases."""
     try:
         return await connector.get_datasource_health(datasource_uid)
@@ -115,9 +115,9 @@ def register_datasource_tools(
         connection_name: str,
         datasource_uid: str,
         query: str,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        step: Optional[str] = None,
+        time_from: str | None = None,
+        time_to: str | None = None,
+        step: str | None = None,
     ) -> str:
         """
         Execute a PromQL query against a Prometheus datasource.
@@ -144,9 +144,9 @@ def register_datasource_tools(
         connection_name: str,
         datasource_uid: str,
         query: str,
-        time_from: Optional[str] = None,
-        time_to: Optional[str] = None,
-        limit: Optional[int] = 100,
+        time_from: str | None = None,
+        time_to: str | None = None,
+        limit: int | None = 100,
     ) -> str:
         """
         Execute a LogQL query against a Loki datasource.
@@ -171,12 +171,12 @@ def register_datasource_tools(
     @mcp.tool()
     async def explore_query(
         connection_name: str,
-        queries: List[Dict[str, Any]],
-        range_from: Optional[str] = None,
-        range_to: Optional[str] = None,
-        max_data_points: Optional[int] = None,
-        interval_ms: Optional[int] = None,
-        additional_options: Optional[Dict[str, Any]] = None,
+        queries: list[dict[str, Any]],
+        range_from: str | None = None,
+        range_to: str | None = None,
+        max_data_points: int | None = None,
+        interval_ms: int | None = None,
+        additional_options: dict[str, Any] | None = None,
     ) -> str:
         """
         Execute a Grafana Explore query via the /api/ds/query endpoint.

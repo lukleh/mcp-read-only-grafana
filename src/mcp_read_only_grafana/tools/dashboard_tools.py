@@ -9,7 +9,6 @@ This module provides tools for:
 
 import json
 from collections.abc import Mapping
-from typing import List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
@@ -31,11 +30,11 @@ def register_dashboard_tools(
     @mcp.tool()
     async def search_dashboards(
         connection_name: str,
-        query: Optional[str] = None,
-        tag: Optional[str] = None,
-        limit: Optional[int] = None,
-        page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
+        query: str | None = None,
+        tag: str | None = None,
+        limit: int | None = None,
+        page: int | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """
         Search for dashboards by name or tag.
@@ -162,9 +161,9 @@ def register_dashboard_tools(
     async def list_folder_dashboards(
         connection_name: str,
         folder_uid: str,
-        limit: Optional[int] = None,
-        page: Optional[int] = None,
-        fields: Optional[List[str]] = None,
+        limit: int | None = None,
+        page: int | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """
         List all dashboards in a specific folder.

@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-
 ORG_NAMESPACE = "lukleh"
 APP_NAME = "mcp-read-only-grafana"
 ENV_PREFIX = "MCP_READ_ONLY_GRAFANA"

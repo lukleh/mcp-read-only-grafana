@@ -46,8 +46,7 @@ uv run mcp-read-only-grafana validate-config
 uv run mcp-read-only-grafana test-connection
 uv run mcp-read-only-grafana test-connection production_grafana
 
-# Code formatting
-uv run black src/mcp_read_only_grafana/
+# Linting
 uv run ruff check src/mcp_read_only_grafana/ tests/
 
 # Run tests

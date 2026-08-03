@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
 """Test Grafana connections."""
 
 import asyncio
 import sys
-from typing import Optional
 
 from ..config import ConfigParser
 from ..grafana_connector import GrafanaConnector
@@ -12,7 +10,7 @@ from ..runtime_paths import RuntimePaths, resolve_runtime_paths
 
 async def test_connection(
     runtime_paths: RuntimePaths,
-    connection_name: Optional[str] = None,
+    connection_name: str | None = None,
 ) -> bool:
     """Test Grafana connection(s)."""
     try:
