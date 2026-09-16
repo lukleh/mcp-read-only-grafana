@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Read-Only Grafana Server provides a read-only default command plus a separate write-capable command for Grafana via the Model Context Protocol (MCP). It uses session-based authentication and supports multiple Grafana connections simultaneously.
+MCP Read-Only Grafana Server provides a read-only default command plus a separate write-capable command for Grafana via the Model Context Protocol (MCP). It authenticates with a Grafana API key (preferred) or a deprecated browser session cookie, and supports multiple Grafana connections simultaneously.
 
 ## Runtime Config Location
 
@@ -144,7 +144,7 @@ Tools are organized into domain-specific modules under `src/mcp_read_only_grafan
 | Module | Tools | Description |
 |--------|-------|-------------|
 | `core_tools.py` | `list_connections`, `get_health`, `get_current_org` | Connection management |
-| `dashboard_tools.py` | 8 tools | Dashboard CRUD and navigation |
+| `dashboard_tools.py` | 8 tools | Dashboard reads and navigation (writes live in `admin_tools.py`) |
 | `datasource_tools.py` | 5 tools | Prometheus, Loki queries |
 | `alert_tools.py` | 8 tools | Alert rules, state, history |
 | `user_tools.py` | 5 tools | Users, teams, annotations |
@@ -153,7 +153,7 @@ Tools are organized into domain-specific modules under `src/mcp_read_only_grafan
 `tools/validate_config.py` and `tools/test_connection.py` back the root CLI subcommands and
 register no MCP tools.
 
-Each module exports a `register_*_tools(mcp, connectors)` function.
+Each module exports a `register_*_tools(mcp, connectors)` function; `register_core_tools` also takes the `connections` list.
 
 ### Configuration Flow
 
