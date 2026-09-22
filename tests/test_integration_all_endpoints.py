@@ -17,7 +17,7 @@ Requirements:
       session_token in connections.yaml or its matching GRAFANA_SESSION_* env var
     - (Optional) Set RUN_WRITE_TESTS=1 to exercise write-capable endpoints
 
-See CLAUDE.md for detailed test configuration and admin test documentation.
+See AGENTS.md for detailed test configuration and admin test documentation.
 """
 
 import functools
