@@ -66,7 +66,7 @@ packages = ["src/mcp_read_only_grafana"]
 ignore = [
     # Broad `except Exception` at MCP tool boundaries is the documented
     # design: exceptions propagate to the framework, which converts them to
-    # proper error responses (see CLAUDE.md "Error Handling Pattern").
+    # proper error responses (see AGENTS.md "Error Handling Pattern").
     "BLE001",
     # The exception types raised (and their messages) are observable API
     # behavior for MCP clients; changing them is out of scope for linting.
