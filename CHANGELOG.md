@@ -7,6 +7,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-25
+
 ### Fixed
 
 - Tool failures report their reason again under mcp 2.1 and later. The SDK
