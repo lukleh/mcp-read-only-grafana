@@ -19,7 +19,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 def register_admin_tools(
@@ -40,6 +40,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_provisioned_alert_rules(connection_name: str) -> str:
         """
         [WRITE] Fetch all provisioned alert rules via the read-only provisioning API.
@@ -55,6 +56,7 @@ def register_admin_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_provisioned_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
         [WRITE] Get a specific alert rule by UID from the provisioning API.
@@ -71,6 +73,7 @@ def register_admin_tools(
         return json.dumps(rule, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def export_alert_rule(connection_name: str, alert_uid: str) -> str:
         """
         [WRITE] Export a specific alert rule in provisioning format.
@@ -87,6 +90,7 @@ def register_admin_tools(
         return json.dumps(exported, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def export_all_alert_rules(connection_name: str) -> str:
         """
         [WRITE] Export all alert rules in provisioning format.
@@ -102,6 +106,7 @@ def register_admin_tools(
         return json.dumps(exported, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_rule_group(connection_name: str, folder_uid: str, group: str) -> str:
         """
         [WRITE] Get a specific alert rule group.
@@ -119,6 +124,7 @@ def register_admin_tools(
         return json.dumps(rule_group, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def export_rule_group(
         connection_name: str, folder_uid: str, group: str
     ) -> str:
@@ -142,6 +148,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_contact_points(connection_name: str) -> str:
         """
         [WRITE] Get all contact points.
@@ -161,6 +168,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_notification_policies(connection_name: str) -> str:
         """
         [WRITE] Get the notification policy tree.
@@ -180,6 +188,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_notification_templates(connection_name: str) -> str:
         """
         [WRITE] Get all notification templates.
@@ -195,6 +204,7 @@ def register_admin_tools(
         return json.dumps(templates, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_notification_template(connection_name: str, name: str) -> str:
         """
         [WRITE] Get a specific notification template by name.
@@ -215,6 +225,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_mute_timings(connection_name: str) -> str:
         """
         [WRITE] Get all mute timings.
@@ -230,6 +241,7 @@ def register_admin_tools(
         return json.dumps(mute_timings, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_mute_timing(connection_name: str, name: str) -> str:
         """
         [WRITE] Get a specific mute timing by name.
@@ -250,6 +262,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def save_dashboard(
         connection_name: str,
         dashboard: dict[str, Any],
@@ -292,6 +305,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def create_folder(
         connection_name: str,
         title: str,
@@ -324,6 +338,7 @@ def register_admin_tools(
     # resource editable in the UI, so editable_in_ui == disable_provenance.
 
     @mcp.tool()
+    @surface_tool_errors
     async def create_alert_rule(
         connection_name: str,
         rule: dict[str, Any],
@@ -350,6 +365,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def update_alert_rule(
         connection_name: str,
         alert_uid: str,
@@ -378,6 +394,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def delete_alert_rule(
         connection_name: str,
         alert_uid: str,
@@ -404,6 +421,7 @@ def register_admin_tools(
         return json.dumps({"status": "deleted", "uid": alert_uid, **result}, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def update_rule_group(
         connection_name: str,
         folder_uid: str,
@@ -440,6 +458,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def create_contact_point(
         connection_name: str,
         contact_point: dict[str, Any],
@@ -465,6 +484,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def update_contact_point(
         connection_name: str,
         uid: str,
@@ -493,6 +513,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def delete_contact_point(
         connection_name: str,
         uid: str,
@@ -523,6 +544,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def set_notification_policies(
         connection_name: str,
         policies: dict[str, Any],
@@ -549,6 +571,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def delete_notification_policies(
         connection_name: str,
         editable_in_ui: bool = True,
@@ -576,6 +599,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def create_mute_timing(
         connection_name: str,
         mute_timing: dict[str, Any],
@@ -601,6 +625,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def update_mute_timing(
         connection_name: str,
         name: str,
@@ -629,6 +654,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def delete_mute_timing(
         connection_name: str,
         name: str,
@@ -659,6 +685,7 @@ def register_admin_tools(
     # =========================================================================
 
     @mcp.tool()
+    @surface_tool_errors
     async def set_notification_template(
         connection_name: str,
         name: str,
@@ -687,6 +714,7 @@ def register_admin_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def delete_notification_template(
         connection_name: str,
         name: str,

@@ -66,7 +66,8 @@ Integration test connection selection:
 - Calls domain-specific registration functions from `src/mcp_read_only_grafana/tools/`
 - Handles package bootstrap flags such as `--write-sample-config`, `--overwrite`, and `--print-paths`
 - Dispatches root CLI management subcommands such as `validate-config` and `test-connection`
-- Error handling: Let exceptions propagate naturally - the MCP framework handles them
+- Error handling: every tool carries `@surface_tool_errors` below `@mcp.tool()`, so anticipated
+  failures reach the caller with their message (see "Error Handling Pattern")
 
 **src/mcp_read_only_grafana/config.py** - Configuration management
 - `GrafanaConnection` (Pydantic model): Validates connection settings
@@ -133,7 +134,11 @@ Custom exceptions in `src/mcp_read_only_grafana/exceptions.py` provide clear, ty
 - `GrafanaAPIError`: Other HTTP errors with status code
 - `GrafanaTimeoutError`: Request timeout
 
-The MCP framework automatically converts exceptions to proper error responses.
+Since mcp 2.1 the SDK reports any exception other than `ToolError` to the caller as the generic
+`Error executing tool <name>`. `surface_tool_errors` in `validation.py` re-raises the types in
+`ANTICIPATED_TOOL_ERRORS` (`GrafanaError`, `ValueError`, `OSError`) as `ToolError` so the caller
+sees the reason; anything else stays a crash with its traceback in the server log. Stack it below
+`@mcp.tool()` on every new tool; `tests/test_tool_error_surfacing.py` fails if one is missing.
 Tool functions use `get_connector()` for validation instead of manual checks.
 
 ### Authentication
@@ -160,7 +165,7 @@ See `connections.yaml.sample` for the authoritative description of the fields.
 3. **Credentials may live in YAML**: an `api_key` in `connections.yaml` is the supported normal
    setup. Environment variables and the persisted state file override it when present
 4. **Multiple instance support**: Each connection has its own connector with independent configuration
-5. **MCP error handling**: Let exceptions propagate; framework handles them properly
+5. **MCP error handling**: Raise the typed errors; `@surface_tool_errors` forwards their message to the caller
 6. **Write endpoint separation**: Provisioning API endpoints and other mutations are only registered by the `mcp-grafana-write` command
    - These endpoints often require elevated Grafana permissions
    - Marked with `[WRITE]` prefix in their docstrings

@@ -13,7 +13,7 @@ from mcp.server.mcpserver import MCPServer
 
 from ..config import GrafanaConnection
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 def register_core_tools(
@@ -30,6 +30,7 @@ def register_core_tools(
     """
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_connections() -> str:
         """
         List all available Grafana connections with their configuration details.
@@ -54,6 +55,7 @@ def register_core_tools(
         return json.dumps(conn_list, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_health(connection_name: str) -> str:
         """
         Check Grafana instance health and version information.
@@ -69,6 +71,7 @@ def register_core_tools(
         return json.dumps(health, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_current_org(connection_name: str) -> str:
         """
         Get current organization information.

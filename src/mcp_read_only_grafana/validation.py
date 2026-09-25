@@ -4,10 +4,59 @@ This module provides helper functions that centralize common validation
 patterns used across all MCP tool functions.
 """
 
-from collections.abc import Mapping
+import functools
+from collections.abc import Awaitable, Callable, Mapping
+from typing import ParamSpec, TypeVar
 
-from .exceptions import ConnectionNotFoundError
+from mcp import MCPError
+from mcp.server.mcpserver.exceptions import ToolError
+
+from .exceptions import ConnectionNotFoundError, GrafanaError
 from .grafana_connector import GrafanaConnector
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+# Exception types the tools raise for failures the caller can act on: a Grafana
+# error (unknown connection, 401/403, other HTTP status, transport failure,
+# timeout), a rejected argument or unparseable response (ValueError), or a
+# problem reading or writing the session state file (OSError). ValueError also
+# covers pydantic ValidationError and JSON decoding errors, so a malformed
+# response is forwarded to the caller rather than logged as a crash. Any other
+# exception is treated as a bug and stays a crash.
+ANTICIPATED_TOOL_ERRORS: tuple[type[Exception], ...] = (
+    GrafanaError,
+    ValueError,
+    OSError,
+)
+
+
+def surface_tool_errors(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    """Report an anticipated tool failure to the caller with its message.
+
+    Since mcp 2.1 the SDK treats any exception other than ``ToolError`` (or a
+    protocol-level ``MCPError``) as a crash and replaces its text with the
+    generic ``Error executing tool <name>``. The failures listed in
+    ``ANTICIPATED_TOOL_ERRORS`` are re-raised as ``ToolError`` so the caller
+    sees the reason. Any other exception keeps the SDK's crash handling: the
+    text stays on the server, logged with its traceback. Because ``ValueError``
+    is in the list, pydantic validation and JSON decoding errors from a
+    malformed backend response are forwarded as well.
+
+    Apply it below ``@mcp.tool()`` on every tool. ``functools.wraps`` keeps the
+    signature and docstring the SDK reads to build the tool schema.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return await fn(*args, **kwargs)
+        except (ToolError, MCPError):
+            raise
+        except ANTICIPATED_TOOL_ERRORS as exc:
+            raise ToolError(str(exc) or type(exc).__name__) from exc
+
+    return wrapper
 
 
 def get_connector(

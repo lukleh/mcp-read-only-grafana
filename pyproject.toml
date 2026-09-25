@@ -21,9 +21,10 @@ classifiers = [
 ]
 dependencies = [
     # The server builds on mcp.server.mcpserver (the 2.x successor to FastMCP).
-    # Capped below 3 so the next major SDK rewrite cannot silently break installs
-    # the way 2.0.0 did when it removed mcp.server.fastmcp.
-    "mcp>=2.0.0,<3",
+    # Capped at the tested minor: 2.0.0 removed mcp.server.fastmcp, and 2.1.0
+    # started hiding the text of tool exceptions other than ToolError, so a new
+    # minor can change behaviour too. Raise the cap after testing the next minor.
+    "mcp>=2.2.0,<2.3",
     "pyyaml>=6.0",
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
@@ -64,9 +65,9 @@ packages = ["src/mcp_read_only_grafana"]
 # those defaults deterministic across relocks; the opt-outs below are
 # deliberate, documented exceptions.
 ignore = [
-    # Broad `except Exception` at MCP tool boundaries is the documented
-    # design: exceptions propagate to the framework, which converts them to
-    # proper error responses (see AGENTS.md "Error Handling Pattern").
+    # Broad `except Exception` in best-effort fallbacks and CLI entry points
+    # is deliberate; the MCP tool boundary itself translates only anticipated
+    # types (see AGENTS.md "Error Handling Pattern").
     "BLE001",
     # The exception types raised (and their messages) are observable API
     # behavior for MCP clients; changing them is out of scope for linting.

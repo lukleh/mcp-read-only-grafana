@@ -14,7 +14,7 @@ from mcp.server.mcpserver import MCPServer
 
 from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 async def _get_current_user_result(connector: GrafanaConnector) -> dict[str, Any]:
@@ -49,6 +49,7 @@ def register_user_tools(
     """
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_current_user(connection_name: str) -> str:
         """
         Get profile information for the authenticated Grafana user.
@@ -70,6 +71,7 @@ def register_user_tools(
         return json.dumps(user, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_user_permissions(connection_name: str) -> str:
         """
         Get permissions granted to the authenticated user.
@@ -92,6 +94,7 @@ def register_user_tools(
         return json.dumps(permissions, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_users(
         connection_name: str,
         page: int | None = None,
@@ -115,6 +118,7 @@ def register_user_tools(
         return json.dumps(users, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_teams(
         connection_name: str,
         page: int | None = None,
@@ -138,6 +142,7 @@ def register_user_tools(
         return json.dumps(teams, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_annotations(
         connection_name: str,
         time_from: str | None = None,

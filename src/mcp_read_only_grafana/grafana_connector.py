@@ -721,9 +721,8 @@ class GrafanaConnector:
             if panel.get("id") == panel_id:
                 return panel
 
-        # GrafanaError with the same message keeps the client-visible output
-        # identical: the MCP framework serializes unhandled tool exceptions
-        # as str(e) only, so the exception type is not observable.
+        # GrafanaError is in ANTICIPATED_TOOL_ERRORS, so the tool boundary
+        # forwards this message to the caller.
         raise GrafanaError(
             f"Panel with id {panel_id} not found in dashboard {dashboard_uid}"
         )

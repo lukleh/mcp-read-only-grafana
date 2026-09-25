@@ -7,8 +7,23 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tool failures report their reason again under mcp 2.1 and later. The SDK
+  now reports any exception other than `ToolError` as the generic
+  `Error executing tool <name>`, which hid unknown connection names, HTTP
+  errors from Grafana, and unreachable hosts. Anticipated failures
+  (`GrafanaError`, `ValueError`, `OSError`) are now re-raised as `ToolError`
+  at the tool boundary; other exceptions keep the SDK's crash handling.
+  The dev lockfile now resolves mcp 2.2.0 so the test suite exercises it.
+
 ### Changed
 
+- Narrowed the SDK dependency from `mcp>=2.0.0,<3` to `mcp>=2.2.0,<2.3`.
+  Fresh installs ignore `uv.lock` and resolve the newest version allowed, so
+  mcp 2.1.0 reached users untested and hid tool error messages. The cap now
+  admits only the minor the test suite runs against; raise it deliberately
+  after testing the next one.
 - Dev tooling: upgraded ruff to 0.16 and adopted its widened implicit default
   rule set (UP, I, BLE, SIM, DTZ, ... on top of the old E4/E7/E9/F). The dev
   extra now pins `ruff>=0.16,<0.17` so a routine relock cannot change the
