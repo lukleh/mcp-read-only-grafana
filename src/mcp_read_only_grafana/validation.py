@@ -20,8 +20,10 @@ R = TypeVar("R")
 # Exception types the tools raise for failures the caller can act on: a Grafana
 # error (unknown connection, 401/403, other HTTP status, transport failure,
 # timeout), a rejected argument or unparseable response (ValueError), or a
-# problem reading or writing the session state file (OSError). Anything else is
-# a bug and stays a crash.
+# problem reading or writing the session state file (OSError). ValueError also
+# covers pydantic ValidationError and JSON decoding errors, so a malformed
+# response is forwarded to the caller rather than logged as a crash. Any other
+# exception is treated as a bug and stays a crash.
 ANTICIPATED_TOOL_ERRORS: tuple[type[Exception], ...] = (
     GrafanaError,
     ValueError,
@@ -36,8 +38,10 @@ def surface_tool_errors(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[
     protocol-level ``MCPError``) as a crash and replaces its text with the
     generic ``Error executing tool <name>``. The failures listed in
     ``ANTICIPATED_TOOL_ERRORS`` are re-raised as ``ToolError`` so the caller
-    sees the reason. Anything else keeps the SDK's crash handling: the text
-    stays on the server, logged with its traceback.
+    sees the reason. Any other exception keeps the SDK's crash handling: the
+    text stays on the server, logged with its traceback. Because ``ValueError``
+    is in the list, pydantic validation and JSON decoding errors from a
+    malformed backend response are forwarded as well.
 
     Apply it below ``@mcp.tool()`` on every tool. ``functools.wraps`` keeps the
     signature and docstring the SDK reads to build the tool schema.
