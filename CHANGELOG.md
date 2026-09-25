@@ -9,6 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Narrowed the SDK dependency from `mcp>=2.0.0,<3` to `mcp>=2.2.0,<2.3`.
+  Fresh installs ignore `uv.lock` and resolve the newest version allowed, so
+  mcp 2.1.0 reached users untested and hid tool error messages. The cap now
+  admits only the minor the test suite runs against; raise it deliberately
+  after testing the next one.
 - Tool failures report their reason again under mcp 2.1 and later. The SDK
   now reports any exception other than `ToolError` as the generic
   `Error executing tool <name>`, which hid unknown connection names, HTTP
