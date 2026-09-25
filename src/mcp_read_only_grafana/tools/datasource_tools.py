@@ -15,7 +15,7 @@ from mcp.server.mcpserver import MCPServer
 
 from ..exceptions import GrafanaAPIError
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 async def _get_datasource_health_result(
@@ -78,6 +78,7 @@ def register_datasource_tools(
     """
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_datasources(connection_name: str) -> str:
         """
         List all configured data sources in Grafana.
@@ -93,6 +94,7 @@ def register_datasource_tools(
         return json.dumps(datasources, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_datasource_health(connection_name: str, datasource_uid: str) -> str:
         """
         Run the health check for a specific datasource.
@@ -111,6 +113,7 @@ def register_datasource_tools(
         return json.dumps(health, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def query_prometheus(
         connection_name: str,
         datasource_uid: str,
@@ -140,6 +143,7 @@ def register_datasource_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def query_loki(
         connection_name: str,
         datasource_uid: str,
@@ -169,6 +173,7 @@ def register_datasource_tools(
         return json.dumps(result, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def explore_query(
         connection_name: str,
         queries: list[dict[str, Any]],

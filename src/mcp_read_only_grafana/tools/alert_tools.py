@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 def register_alert_tools(
@@ -29,6 +29,7 @@ def register_alert_tools(
     """
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_alerts(
         connection_name: str, folder_uid: str | None = None
     ) -> str:
@@ -47,6 +48,7 @@ def register_alert_tools(
         return json.dumps(alerts, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_alert_rule_by_uid(connection_name: str, alert_uid: str) -> str:
         """
         Get detailed information about a specific alert rule.
@@ -63,6 +65,7 @@ def register_alert_tools(
         return json.dumps(alert, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_ruler_rules(connection_name: str) -> str:
         """
         Get all alert rules from the Ruler API.
@@ -82,6 +85,7 @@ def register_alert_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_ruler_namespace_rules(connection_name: str, namespace: str) -> str:
         """
         Get all rule groups for a specific namespace (folder).
@@ -98,6 +102,7 @@ def register_alert_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_ruler_group(
         connection_name: str, namespace: str, group_name: str
     ) -> str:
@@ -117,6 +122,7 @@ def register_alert_tools(
         return json.dumps(group, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_alert_rules_with_state(
         connection_name: str,
         state: str | None = None,
@@ -142,6 +148,7 @@ def register_alert_tools(
         return json.dumps(rules, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_firing_alerts(
         connection_name: str,
         filter_labels: list[str] | None = None,
@@ -175,6 +182,7 @@ def register_alert_tools(
         return json.dumps(alerts, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_alert_state_history(
         connection_name: str,
         rule_uid: str | None = None,

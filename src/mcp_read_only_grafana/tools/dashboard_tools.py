@@ -13,7 +13,7 @@ from collections.abc import Mapping
 from mcp.server.mcpserver import MCPServer
 
 from ..grafana_connector import GrafanaConnector
-from ..validation import get_connector
+from ..validation import get_connector, surface_tool_errors
 
 
 def register_dashboard_tools(
@@ -28,6 +28,7 @@ def register_dashboard_tools(
     """
 
     @mcp.tool()
+    @surface_tool_errors
     async def search_dashboards(
         connection_name: str,
         query: str | None = None,
@@ -61,6 +62,7 @@ def register_dashboard_tools(
         return json.dumps(dashboards, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_dashboard_info(connection_name: str, dashboard_uid: str) -> str:
         """
         Get lightweight dashboard metadata and panel list (without full panel definitions).
@@ -81,6 +83,7 @@ def register_dashboard_tools(
         return json.dumps(info, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_dashboard_panel(
         connection_name: str, dashboard_uid: str, panel_id: int
     ) -> str:
@@ -103,6 +106,7 @@ def register_dashboard_tools(
         return json.dumps(panel, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_dashboard(connection_name: str, dashboard_uid: str) -> str:
         """
         Get full dashboard definition including all panels and settings.
@@ -124,6 +128,7 @@ def register_dashboard_tools(
         return json.dumps(dashboard, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_dashboard_panels(connection_name: str, dashboard_uid: str) -> str:
         """
         Get simplified panel information from a dashboard.
@@ -143,6 +148,7 @@ def register_dashboard_tools(
         return json.dumps(panels, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_folders(connection_name: str) -> str:
         """
         List all folders in the Grafana instance.
@@ -158,6 +164,7 @@ def register_dashboard_tools(
         return json.dumps(folders, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def list_folder_dashboards(
         connection_name: str,
         folder_uid: str,
@@ -188,6 +195,7 @@ def register_dashboard_tools(
         return json.dumps(dashboards, indent=2)
 
     @mcp.tool()
+    @surface_tool_errors
     async def get_dashboard_versions(connection_name: str, dashboard_uid: str) -> str:
         """
         Get version history of a dashboard.

@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tool failures report their reason again under mcp 2.1 and later. The SDK
+  now reports any exception other than `ToolError` as the generic
+  `Error executing tool <name>`, which hid unknown connection names, HTTP
+  errors from Grafana, and unreachable hosts. Anticipated failures
+  (`GrafanaError`, `ValueError`, `OSError`) are now re-raised as `ToolError`
+  at the tool boundary; programming errors keep the SDK's crash handling.
+  The dev lockfile now resolves mcp 2.2.0 so the test suite exercises it.
+
 ### Changed
 
 - Dev tooling: upgraded ruff to 0.16 and adopted its widened implicit default
